@@ -1,0 +1,3426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Canyon Defense</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+/* Custom scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(233,69,96,0.6); }
+* { scrollbar-width: thin; scrollbar-color: rgba(233,69,96,0.4) rgba(0,0,0,0.2); }
+body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+#gameContainer {
+    position: relative;
+    display: flex;
+    background: #0f0f23;
+    border: 2px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    height: 580px;
+    transform-origin: center center;
+}
+#gameCanvas {
+    display: block;
+    cursor: crosshair;
+    touch-action: none;
+}
+#sidePanel {
+    width: 220px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border-left: 2px solid #333;
+    display: flex;
+    flex-direction: column;
+    color: #ddd;
+    font-size: 12px;
+    user-select: none;
+    overflow: hidden;
+}
+.panel-header {
+    background: linear-gradient(90deg, #e94560, #c23152);
+    padding: 8px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+#resourceBar {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid #333;
+    font-size: 11px;
+}
+.resource { display: flex; align-items: center; gap: 4px; }
+.resource-icon { font-size: 14px; }
+.resource-val { color: #ffd700; font-weight: bold; }
+#livesVal { color: #e94560; }
+#scoreVal { color: #4ecdc4; }
+#tabBar {
+    display: flex;
+    border-bottom: 1px solid #333;
+}
+.tab-btn {
+    flex: 1;
+    padding: 6px 0;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(0,0,0,0.2);
+    border: none;
+    color: #888;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    border-right: 1px solid #333;
+}
+.tab-btn:last-child { border-right: none; }
+.tab-btn.active { background: rgba(233,69,96,0.3); color: #fff; }
+.tab-btn:hover { background: rgba(233,69,96,0.2); color: #ccc; }
+#towerList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px;
+}
+.tower-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    position: relative;
+}
+.tower-item:hover { background: rgba(255,255,255,0.08); border-color: #555; }
+.tower-item.selected { background: rgba(233,69,96,0.2); border-color: #e94560; }
+.tower-item.locked { opacity: 0.45; cursor: not-allowed; }
+.tower-icon {
+    width: 32px; height: 32px;
+    border-radius: 4px;
+    margin-right: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.tower-info { flex: 1; min-width: 0; }
+.tower-name { font-weight: bold; font-size: 11px; color: #eee; }
+.tower-cost { font-size: 10px; color: #ffd700; }
+.tower-desc { font-size: 9px; color: #888; margin-top: 1px; }
+.tower-lock { font-size: 9px; color: #e94560; margin-top: 2px; }
+#abilityBar {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    border-top: 1px solid #333;
+    background: rgba(0,0,0,0.2);
+}
+.ability-btn {
+    flex: 1;
+    padding: 6px 2px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.3);
+    color: #888;
+    font-size: 9px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.ability-btn.available { border-color: #e94560; color: #eee; cursor: pointer; }
+.ability-btn.available:hover { background: rgba(233,69,96,0.3); }
+.ability-btn.active-ability { background: rgba(233,69,96,0.5); border-color: #ff6b81; }
+.ability-btn.locked { opacity: 0.35; cursor: not-allowed; }
+.ability-btn .cooldown-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.6);
+    transition: height 0.1s;
+}
+.ability-icon { font-size: 16px; display: block; }
+#controlBar {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    border-top: 1px solid #333;
+}
+.ctrl-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.3);
+    color: #ccc;
+    font-size: 10px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+.ctrl-btn.sell-mode { background: rgba(233,69,96,0.4); border-color: #e94560; }
+#wavePreview {
+    padding: 6px 10px;
+    border-top: 1px solid #333;
+    background: rgba(0,0,0,0.2);
+    font-size: 10px;
+}
+#wavePreview .label { color: #888; margin-bottom: 3px; }
+#wavePreview .enemies { display: flex; gap: 3px; flex-wrap: wrap; }
+.preview-enemy {
+    width: 18px; height: 18px;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+}
+#towerInfo {
+    display: none;
+    padding: 8px;
+    border-top: 1px solid #333;
+    background: rgba(0,0,0,0.3);
+    font-size: 10px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+#towerInfo .ti-name { font-weight: bold; font-size: 12px; color: #e94560; }
+#towerInfo .ti-stat { color: #aaa; margin: 2px 0; }
+
+/* Menu screens */
+#menuScreen, #gameOverScreen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,15,35,0.95);
+    z-index: 100;
+}
+#menuScreen h1 {
+    font-size: 48px;
+    color: #e94560;
+    text-shadow: 0 0 20px rgba(233,69,96,0.5);
+    margin-bottom: 10px;
+    letter-spacing: 3px;
+}
+#menuScreen .subtitle {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+.menu-btn {
+    padding: 12px 40px;
+    margin: 6px;
+    border: 2px solid #e94560;
+    border-radius: 6px;
+    background: rgba(233,69,96,0.15);
+    color: #e94560;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 200px;
+    text-align: center;
+    font-family: inherit;
+}
+.menu-btn:hover {
+    background: rgba(233,69,96,0.4);
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(233,69,96,0.3);
+}
+.menu-label {
+    color: #aaa;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+#gameOverScreen h2 { color: #e94560; font-size: 36px; margin-bottom: 10px; }
+#gameOverScreen .go-stats { color: #aaa; font-size: 14px; margin: 5px 0; }
+
+/* Mobile responsive styles */
+@media (max-width: 1024px) {
+    body { overflow: auto; align-items: flex-start; min-height: auto; }
+    #gameContainer {
+        flex-direction: column;
+        width: 100vw;
+        max-width: 100vw;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    #gameCanvas {
+        width: 100vw;
+        height: auto;
+    }
+    #sidePanel {
+        width: 100%;
+        border-left: none;
+        border-top: 2px solid #333;
+    }
+    #menuScreen h1 { font-size: 32px; }
+    .menu-btn { min-width: 160px; font-size: 14px; padding: 10px 30px; }
+    #gameOverScreen h2 { font-size: 28px; }
+}
+
+@media (max-width: 600px) {
+    #resourceBar { font-size: 10px; padding: 4px 6px; }
+    .resource-icon { font-size: 12px; }
+    #controlBar { flex-wrap: wrap; }
+    .ctrl-btn { font-size: 9px; padding: 6px 2px; }
+    .tab-btn { font-size: 9px; padding: 5px 0; }
+    .tower-item { padding: 5px 6px; }
+    .tower-icon { width: 28px; height: 28px; font-size: 15px; }
+    .tower-name { font-size: 10px; }
+    #towerList { max-height: 30vh; }
+    #menuScreen h1 { font-size: 24px; letter-spacing: 1px; }
+    .menu-btn { min-width: 140px; font-size: 13px; padding: 8px 20px; }
+    .ability-btn { font-size: 8px; }
+    .ability-icon { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+    <canvas id="gameCanvas" width="780" height="580"></canvas>
+    <div id="sidePanel">
+        <div class="panel-header">CANYON DEFENSE</div>
+        <div id="resourceBar">
+            <div class="resource"><span class="resource-icon">$</span><span class="resource-val" id="moneyVal">250</span></div>
+            <div class="resource"><span class="resource-icon">W</span><span id="waveVal" style="color:#aaa;">0/30</span></div>
+            <div class="resource"><span class="resource-icon" style="color:#e94560;">&#9829;</span><span class="resource-val" id="livesVal">10</span></div>
+        </div>
+        <div id="resourceBar2" style="padding:4px 10px;background:rgba(0,0,0,0.15);border-bottom:1px solid #333;font-size:10px;">
+            <div class="resource"><span style="color:#4ecdc4;">Score:</span><span class="resource-val" id="scoreVal">0</span></div>
+        </div>
+        <div id="tabBar">
+            <button class="tab-btn active" data-tab="0">BASIC</button>
+            <button class="tab-btn" data-tab="1">ADVANCED</button>
+            <button class="tab-btn" data-tab="2">BUILDINGS</button>
+        </div>
+        <div id="towerList"></div>
+        <div id="towerInfo">
+            <div class="ti-name" id="tiName"></div>
+            <div class="ti-stat" id="tiRange"></div>
+            <div class="ti-stat" id="tiDamage"></div>
+            <div class="ti-stat" id="tiRate"></div>
+            <div class="ti-stat" id="tiSpecial"></div>
+        </div>
+        <div id="abilityBar">
+            <div class="ability-btn locked" id="abilNuke" title="ICBM Strike">
+                <span class="ability-icon">&#9762;</span>
+                <span>ICBM</span>
+                <div class="cooldown-overlay" style="height:0%"></div>
+            </div>
+            <div class="ability-btn locked" id="abilWall" title="Place Wall">
+                <span class="ability-icon">&#9632;</span>
+                <span>WALL</span>
+                <div class="cooldown-overlay" style="height:0%"></div>
+            </div>
+            <div class="ability-btn locked" id="abilFreeze" title="Freeze">
+                <span class="ability-icon">&#10052;</span>
+                <span>FREEZE</span>
+                <div class="cooldown-overlay" style="height:0%"></div>
+            </div>
+        </div>
+        <div id="controlBar">
+            <button class="ctrl-btn" id="btnSell">SELL</button>
+            <button class="ctrl-btn" id="btnSpeed">SPEED x1</button>
+            <button class="ctrl-btn" id="btnMusic" title="Toggle Music">&#9835; ON</button>
+            <button class="ctrl-btn" id="btnWave" style="background:rgba(78,205,196,0.2);border-color:#4ecdc4;color:#4ecdc4;">SEND WAVE</button>
+        </div>
+        <audio id="bgMusic" loop preload="auto" src="soundtrack.weba"></audio>
+        <div id="wavePreview">
+            <div class="label">Next Wave:</div>
+            <div class="enemies" id="waveEnemies">--</div>
+        </div>
+    </div>
+
+    <div id="menuScreen">
+        <h1>CANYON DEFENSE</h1>
+        <div class="subtitle">Defend the town from waves of enemies</div>
+        <div id="menuStep1">
+            <div class="menu-label">SELECT DIFFICULTY</div>
+            <button class="menu-btn" onclick="Game.selectDifficulty('easy')">EASY (30 waves)</button>
+            <button class="menu-btn" onclick="Game.selectDifficulty('normal')">NORMAL (40 waves)</button>
+            <button class="menu-btn" onclick="Game.selectDifficulty('hard')">HARD (50 waves)</button>
+        </div>
+        <div id="menuStep2" style="display:none;">
+            <div class="menu-label" id="diffLabel"></div>
+            <div class="menu-label" style="margin-top:10px;">SELECT MAP</div>
+            <div id="mapButtons"></div>
+            <button class="menu-btn menu-btn-back" onclick="Game.backToStep1()" style="margin-top:12px;min-width:100px;font-size:13px;">BACK</button>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" style="display:none;">
+        <h2 id="goTitle">GAME OVER</h2>
+        <div class="go-stats" id="goWave"></div>
+        <div class="go-stats" id="goScore"></div>
+        <div class="go-stats" id="goKills"></div>
+        <button class="menu-btn" onclick="Game.showMenu()" style="margin-top:20px;">MAIN MENU</button>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// CANYON DEFENSE - HTML5 Recreation
+// ============================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const CW = canvas.width;
+const CH = canvas.height;
+
+// ============================================================
+// UTILITY
+// ============================================================
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+function rand(a, b) { return Math.random() * (b - a) + a; }
+function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
+function angleTo(a, b) { return Math.atan2(b.y - a.y, b.x - a.x); }
+function lerpColor(c1, c2, t) {
+    const h = s => parseInt(s.length===4 ? s[1]+s[1]+s[2]+s[2]+s[3]+s[3] : s.slice(1), 16);
+    const a = h(c1), b = h(c2);
+    const r = Math.round(lerp((a>>16)&255, (b>>16)&255, t));
+    const g = Math.round(lerp((a>>8)&255, (b>>8)&255, t));
+    const bl = Math.round(lerp(a&255, b&255, t));
+    return `rgb(${r},${g},${bl})`;
+}
+
+// ============================================================
+// GRID SYSTEM
+// ============================================================
+const GRID_SIZE = 40;
+const GRID_COLS = Math.floor(CW / GRID_SIZE);  // 19
+const GRID_ROWS = Math.floor(CH / GRID_SIZE);  // 14
+
+function snapToGrid(x, y) {
+    const col = Math.floor(x / GRID_SIZE);
+    const row = Math.floor(y / GRID_SIZE);
+    return {
+        col: clamp(col, 0, GRID_COLS - 1),
+        row: clamp(row, 0, GRID_ROWS - 1),
+        x: clamp(col, 0, GRID_COLS - 1) * GRID_SIZE + GRID_SIZE / 2,
+        y: clamp(row, 0, GRID_ROWS - 1) * GRID_SIZE + GRID_SIZE / 2
+    };
+}
+
+// ============================================================
+// MAP DATA - Three canyon maps
+// ============================================================
+const MAPS = {
+    canyon: {
+        name: 'Canyon Pass',
+        // S-curve path with wide spacing between lanes for tower placement
+        path: [
+            {x: -20, y: 280},
+            {x: 160, y: 280},
+            {x: 160, y: 100},
+            {x: 400, y: 100},
+            {x: 400, y: 460},
+            {x: 620, y: 460},
+            {x: 620, y: 200},
+            {x: 800, y: 200}
+        ],
+        pathWidth: 80,
+        bgColor: '#3d2b1f',
+        groundColor: '#5c4033',
+        cliffColor: '#8B7355',
+    },
+    desert: {
+        name: 'Desert Maze',
+        // Vertical S-curves with wide lanes
+        path: [
+            {x: -20, y: 80},
+            {x: 240, y: 80},
+            {x: 240, y: 480},
+            {x: 500, y: 480},
+            {x: 500, y: 80},
+            {x: 800, y: 80}
+        ],
+        pathWidth: 80,
+        bgColor: '#2d1f15',
+        groundColor: '#4a3328',
+        cliffColor: '#7a6050',
+    },
+    fortress: {
+        name: 'Fortress',
+        // Top entry, winding down with enough space between horizontal lanes
+        path: [
+            {x: 390, y: -20},
+            {x: 390, y: 60},
+            {x: 80, y: 60},
+            {x: 80, y: 260},
+            {x: 700, y: 260},
+            {x: 700, y: 460},
+            {x: 80, y: 460},
+            {x: 80, y: 600}
+        ],
+        pathWidth: 80,
+        bgColor: '#1f1520',
+        groundColor: '#3a2530',
+        cliffColor: '#6a4a55',
+    },
+    crossroads: {
+        name: 'Crossroads',
+        // Long winding path with multiple turns
+        path: [
+            {x: -20, y: 500},
+            {x: 200, y: 500},
+            {x: 200, y: 80},
+            {x: 580, y: 80},
+            {x: 580, y: 500},
+            {x: 800, y: 500}
+        ],
+        pathWidth: 80,
+        bgColor: '#1f2520',
+        groundColor: '#2a3a28',
+        cliffColor: '#4a6a45',
+    },
+    spiral: {
+        name: 'Spiral',
+        // Spiral-like path from outside inward
+        path: [
+            {x: -20, y: 60},
+            {x: 700, y: 60},
+            {x: 700, y: 500},
+            {x: 80, y: 500},
+            {x: 80, y: 260},
+            {x: 480, y: 260},
+            {x: 480, y: 600}
+        ],
+        pathWidth: 80,
+        bgColor: '#25201f',
+        groundColor: '#3a3530',
+        cliffColor: '#6a5a50',
+    }
+};
+
+// ============================================================
+// TOWER DEFINITIONS
+// ============================================================
+const TOWER_DEFS = [
+    // Tab 0: Basic
+    [
+        { id: 'missile', name: 'Missile Turret', cost: 100, range: 150, damage: 15, rate: 60, target: 'ground',
+          desc: 'Basic projectile', special: '', color: '#4a9', unlockReq: null, icon: '\u2316', gridW: 1, gridH: 1 },
+        { id: 'howitzer', name: 'Howitzer', cost: 200, range: 170, damage: 25, rate: 90, target: 'ground',
+          desc: 'Splash damage', special: 'splash', splashRadius: 50, color: '#c73', unlockReq: {type:'build', tower:'missile', count:3}, icon: '\u2738', gridW: 1, gridH: 1 },
+        { id: 'tesla', name: 'Tesla Tower', cost: 500, range: 130, damage: 12, rate: 30, target: 'ground',
+          desc: 'Area damage around it', special: 'aoe', color: '#59f', unlockReq: {type:'build', tower:'howitzer', count:2}, icon: '\u26A1', gridW: 1, gridH: 1 },
+        { id: 'gatling', name: 'Gatling Laser', cost: 800, range: 180, damage: 8, rate: 8, target: 'ground',
+          desc: 'Pierces shields', special: 'pierce', color: '#f55', unlockReq: {type:'build', tower:'tesla', count:2}, icon: '\u2742', gridW: 1, gridH: 1 },
+        { id: 'nullifier', name: 'Nullificator', cost: 1000, range: 150, damage: 20, rate: 50, target: 'both',
+          desc: 'Removes enemy buffs', special: 'nullify', color: '#a5f', unlockReq: {type:'money', amount: 1500}, icon: '\u2300', gridW: 1, gridH: 1 },
+    ],
+    // Tab 1: Advanced
+    [
+        { id: 'aa', name: 'AA Gun', cost: 150, range: 190, damage: 18, rate: 45, target: 'air',
+          desc: 'Anti-air only', special: '', color: '#8cf', unlockReq: null, icon: '\u2191', gridW: 1, gridH: 1 },
+        { id: 'goo', name: 'Goo Cannon', cost: 200, range: 140, damage: 10, rate: 70, target: 'both',
+          desc: 'Splash + slows enemies', special: 'goosplash', splashRadius: 45, slowAmount: 0.4, slowDuration: 120, color: '#5b5', unlockReq: {type:'build', tower:'aa', count:2}, icon: '\u25C9', gridW: 1, gridH: 1 },
+        { id: 'chain', name: 'Chain Gun', cost: 500, range: 160, damage: 22, rate: 35, target: 'ground',
+          desc: 'Hits 3 enemies', special: 'chain', chainCount: 3, color: '#cc5', unlockReq: {type:'build', tower:'goo', count:2}, icon: '\u2261', gridW: 1, gridH: 1 },
+        { id: 'gauss', name: 'Gauss Cannon', cost: 800, range: 200, damage: 35, rate: 55, target: 'air',
+          desc: 'Pierces shields (air)', special: 'pierce', color: '#f8a', unlockReq: {type:'build', tower:'chain', count:1}, icon: '\u2726', gridW: 1, gridH: 1 },
+        { id: 'oil', name: 'Oil Spray', cost: 600, range: 100, damage: 5, rate: 20, target: 'ground',
+          desc: 'Area slow trap', special: 'oilslow', slowAmount: 0.6, color: '#654', unlockReq: {type:'build', tower:'wall', count:10}, icon: '\u2588', gridW: 1, gridH: 1 },
+    ],
+    // Tab 2: Buildings
+    [
+        { id: 'icbm_silo', name: 'ICBM Silo', cost: 500, range: 0, damage: 0, rate: 0, target: 'none',
+          desc: 'Unlocks ICBM ability', special: 'building', building: 'nuke', color: '#f84', unlockReq: null, icon: '\u2622', gridW: 2, gridH: 2 },
+        { id: 'wall_factory', name: 'Wall Factory', cost: 800, range: 0, damage: 0, rate: 0, target: 'none',
+          desc: 'Unlocks Wall ability', special: 'building', building: 'wall', color: '#888', unlockReq: null, icon: '\u2593', gridW: 2, gridH: 2 },
+        { id: 'recycler', name: 'Recycler', cost: 900, range: 0, damage: 0, rate: 0, target: 'none',
+          desc: 'Income +50% per kill', special: 'building', building: 'recycler', color: '#5c5', unlockReq: null, icon: '\u267B', gridW: 2, gridH: 2 },
+        { id: 'radar', name: 'Radar Dome', cost: 1200, range: 220, damage: 0, rate: 0, target: 'none',
+          desc: '+10% range & dmg nearby', special: 'building', building: 'radar', color: '#58f', unlockReq: {type:'money', amount:1000}, icon: '\u25CE', gridW: 2, gridH: 2 },
+        { id: 'lab', name: 'Laboratory', cost: 1250, range: 0, damage: 0, rate: 0, target: 'none',
+          desc: 'Unlocks Freeze ability', special: 'building', building: 'lab', color: '#aef', unlockReq: {type:'build', tower:'wall_factory', count:2}, icon: '\u2697', gridW: 2, gridH: 2 },
+    ]
+];
+
+// ============================================================
+// ENEMY DEFINITIONS
+// ============================================================
+// Base enemy types with stats per level (1-5)
+const ENEMY_BASES = {
+    soldier:   { color: '#8a5', size: 8,  flying: false, speed: 1.2,  hpBase: 30,  hpPerLvl: 25,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 1 },
+    tank:      { color: '#585', size: 11, flying: false, speed: 0.8,  hpBase: 80,  hpPerLvl: 50,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 3 },
+    speeder:   { color: '#cc5', size: 7,  flying: false, speed: 2.0,  hpBase: 20,  hpPerLvl: 15,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 5 },
+    drone:     { color: '#5af', size: 8,  flying: true,  speed: 1.5,  hpBase: 25,  hpPerLvl: 20,  rewardBase: 15,  rewardPerLvl: 10,  unlockWave: 7 },
+    shielded:  { color: '#a8a', size: 10, flying: false, speed: 1.0,  hpBase: 60,  hpPerLvl: 40,  rewardBase: 25,  rewardPerLvl: 15,  unlockWave: 10 },
+    healer:    { color: '#5e5', size: 9,  flying: false, speed: 1.0,  hpBase: 50,  hpPerLvl: 30,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 14 },
+    airship:   { color: '#88f', size: 13, flying: true,  speed: 0.7,  hpBase: 100, hpPerLvl: 60,  rewardBase: 30,  rewardPerLvl: 20,  unlockWave: 18 },
+    jammer:    { color: '#f5a', size: 12, flying: false, speed: 0.9,  hpBase: 120, hpPerLvl: 50,  rewardBase: 40,  rewardPerLvl: 25,  unlockWave: 22 },
+    fortress:  { color: '#c55', size: 15, flying: false, speed: 0.5,  hpBase: 250, hpPerLvl: 80,  rewardBase: 60,  rewardPerLvl: 35,  unlockWave: 28 },
+    mothership:{ color: '#f5f', size: 16, flying: true,  speed: 0.4,  hpBase: 300, hpPerLvl: 100, rewardBase: 80,  rewardPerLvl: 45,  unlockWave: 35 },
+};
+
+// Possible specials (at most one per enemy)
+const ENEMY_SPECIALS = ['shield', 'autorepair', 'fast', 'jammer'];
+
+function makeEnemyDef(wave, difficulty) {
+    const diffMult = difficulty === 'easy' ? 1 : difficulty === 'normal' ? 1.3 : 1.6;
+    const types = [];
+
+    for (const [typeName, base] of Object.entries(ENEMY_BASES)) {
+        if (wave < base.unlockWave) continue;
+
+        // Level scales with wave progression (1-5)
+        const wavesPast = wave - base.unlockWave;
+        const level = Math.min(5, 1 + Math.floor(wavesPast / 5));
+
+        const hp = (base.hpBase + base.hpPerLvl * (level - 1)) * diffMult;
+        const reward = base.rewardBase + base.rewardPerLvl * (level - 1);
+        const speed = base.speed + level * 0.03;
+
+        const enemy = {
+            type: typeName, hp, speed, reward, color: base.color, size: base.size,
+            flying: base.flying, shield: 0, autorepair: 0, jammer: false, level
+        };
+
+        // Innate specials for specific types (at most one)
+        if (typeName === 'shielded') {
+            enemy.shield = 0.3 + level * 0.05;
+        } else if (typeName === 'healer') {
+            enemy.autorepair = 0.3 + level * 0.15;
+        } else if (typeName === 'jammer') {
+            enemy.jammer = true;
+            enemy.jamRange = 80;
+        } else if (typeName === 'fortress') {
+            enemy.shield = 0.4 + level * 0.05;
+        } else if (typeName === 'mothership') {
+            enemy.shield = 0.4;
+        } else if (typeName === 'airship') {
+            enemy.shield = 0.2 + level * 0.04;
+        } else if (level >= 3 && wavesPast > 10) {
+            // Higher level basic enemies may gain one random special
+            const roll = (wave * 17 + typeName.charCodeAt(0)) % 4;
+            if (roll === 0) enemy.shield = 0.2;
+            else if (roll === 1) enemy.autorepair = 0.3;
+            // rolls 2-3: no special (keeps some enemies plain)
+        }
+
+        types.push(enemy);
+    }
+
+    return types;
+}
+
+function generateWave(waveNum, difficulty) {
+    const types = makeEnemyDef(waveNum, difficulty);
+    const count = Math.min(5 + Math.floor(waveNum * 1.5), 40);
+    const enemies = [];
+    const gap = Math.max(10, 35 - Math.min(waveNum, 25));
+    for (let i = 0; i < count; i++) {
+        const def = types[Math.floor(Math.random() * types.length)];
+        enemies.push({...def, spawnDelay: gap});
+    }
+    return enemies;
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const Game = {
+    state: 'menu', // menu, playing, paused, gameover
+    difficulty: 'easy',
+    money: 300,
+    lives: 10,
+    score: 0,
+    kills: 0,
+    wave: 0,
+    maxWaves: 30,
+    waveTimer: 0,
+    waveDelay: 3600, // frames between auto-waves (at 60fps)
+    speedMult: 1,
+    selectedTower: null,
+    selectedTowerDef: null,
+    sellMode: false,
+    activeAbility: null,
+    map: null,
+    mapKey: 'canyon',
+
+    towers: [],
+    enemies: [],
+    projectiles: [],
+    effects: [],
+    walls: [],
+    pendingWave: [],
+    spawnTimer: 0,
+
+    // Ability cooldowns (in frames)
+    nukeCooldown: 0,
+    nukeCooldownMax: 1800,
+    wallCooldown: 0,
+    wallCooldownMax: 600,
+    freezeCooldown: 0,
+    freezeCooldownMax: 1200,
+
+    // Unlocks
+    unlockedTowers: new Set(),
+    buildCounts: {},
+    recyclerCount: 0,
+    radarTowers: [],
+
+    // Cached path data
+    pathSegments: [],
+    pathTotalLength: 0,
+
+    // Grid-based placement
+    buildGrid: null,
+
+    // Flow field pathfinding
+    flowGrid: null,
+    flowCols: 0,
+    flowRows: 0,
+    flowCellSize: 10,
+    flowDirty: false,
+
+    mouse: {x: 0, y: 0},
+    hoveredTower: null,
+    currentTab: 0,
+
+    getCanvasCoords(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    },
+
+    init() {
+        canvas.addEventListener('mousemove', e => {
+            const coords = Game.getCanvasCoords(e.clientX, e.clientY);
+            Game.mouse.x = coords.x;
+            Game.mouse.y = coords.y;
+        });
+        canvas.addEventListener('click', e => Game.handleClick(e));
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            Game.cancelSelection();
+        });
+
+        // Touch support for mobile
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const coords = Game.getCanvasCoords(touch.clientX, touch.clientY);
+            Game.mouse.x = coords.x;
+            Game.mouse.y = coords.y;
+        }, {passive: false});
+
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const coords = Game.getCanvasCoords(touch.clientX, touch.clientY);
+            Game.mouse.x = coords.x;
+            Game.mouse.y = coords.y;
+        }, {passive: false});
+
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault();
+            Game.handleClick(e);
+        }, {passive: false});
+
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space' && Game.state === 'playing') {
+                e.preventDefault();
+                Game.sendWave();
+            }
+            if (e.code === 'Escape') {
+                Game.cancelSelection();
+            }
+        });
+
+        // Tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Game.currentTab = parseInt(btn.dataset.tab);
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                Game.renderTowerList();
+            });
+        });
+
+        // Control buttons
+        document.getElementById('btnSell').addEventListener('click', () => {
+            Game.sellMode = !Game.sellMode;
+            Game.selectedTowerDef = null;
+            Game.activeAbility = null;
+            document.getElementById('btnSell').classList.toggle('sell-mode', Game.sellMode);
+        });
+
+        document.getElementById('btnSpeed').addEventListener('click', () => {
+            Game.speedMult = Game.speedMult === 1 ? 2 : Game.speedMult === 2 ? 3 : 1;
+            document.getElementById('btnSpeed').textContent = 'SPEED x' + Game.speedMult;
+        });
+
+        document.getElementById('btnWave').addEventListener('click', () => Game.sendWave());
+
+        // Music toggle
+        Game.bgMusic = document.getElementById('bgMusic');
+        Game.musicEnabled = true;
+        Game.musicStarted = false;
+        document.getElementById('btnMusic').addEventListener('click', () => {
+            Game.musicEnabled = !Game.musicEnabled;
+            document.getElementById('btnMusic').textContent = Game.musicEnabled ? '\u266B ON' : '\u266B OFF';
+            if (Game.musicEnabled && Game.state === 'playing') {
+                Game.bgMusic.play().catch(() => {});
+            } else {
+                Game.bgMusic.pause();
+            }
+        });
+
+        // Ability buttons
+        document.getElementById('abilNuke').addEventListener('click', () => Game.activateAbility('nuke'));
+        document.getElementById('abilWall').addEventListener('click', () => Game.activateAbility('wall'));
+        document.getElementById('abilFreeze').addEventListener('click', () => Game.activateAbility('freeze'));
+
+        Game.renderTowerList();
+        requestAnimationFrame(Game.loop);
+    },
+
+    selectDifficulty(diff) {
+        Game.pendingDifficulty = diff;
+        document.getElementById('menuStep1').style.display = 'none';
+        document.getElementById('menuStep2').style.display = '';
+        const labels = {easy: 'EASY (30 waves)', normal: 'NORMAL (40 waves)', hard: 'HARD (50 waves)'};
+        document.getElementById('diffLabel').textContent = 'Difficulty: ' + labels[diff];
+        const container = document.getElementById('mapButtons');
+        container.innerHTML = '';
+        for (const [key, map] of Object.entries(MAPS)) {
+            const btn = document.createElement('button');
+            btn.className = 'menu-btn';
+            btn.textContent = map.name;
+            btn.onclick = () => Game.start(diff, key);
+            container.appendChild(btn);
+        }
+    },
+
+    backToStep1() {
+        document.getElementById('menuStep1').style.display = '';
+        document.getElementById('menuStep2').style.display = 'none';
+    },
+
+    start(diff, mapKey) {
+        Game.difficulty = diff;
+        Game.mapKey = mapKey;
+        Game.map = MAPS[mapKey];
+        Game.money = 300;
+        Game.lives = 10;
+        Game.score = 0;
+        Game.kills = 0;
+        Game.wave = 0;
+        Game.maxWaves = diff === 'easy' ? 30 : diff === 'normal' ? 40 : 50;
+        Game.waveDelay = diff === 'easy' ? 3600 : diff === 'normal' ? 2700 : 1800;
+        Game.waveTimer = Game.waveDelay;
+        Game.speedMult = 1;
+        Game.towers = [];
+        Game.enemies = [];
+        Game.projectiles = [];
+        Game.effects = [];
+        Game.walls = [];
+        Game.pendingWave = [];
+        Game.spawnTimer = 0;
+        Game.selectedTower = null;
+        Game.selectedTowerDef = null;
+        Game.sellMode = false;
+        Game.activeAbility = null;
+        Game.nukeCooldown = 0;
+        Game.wallCooldown = 0;
+        Game.freezeCooldown = 0;
+        Game.buildCounts = {};
+        Game.recyclerCount = 0;
+        Game.radarTowers = [];
+        Game.hoveredTower = null;
+        Game.currentTab = 0;
+
+        // Default unlocks - first item in each tab
+        Game.unlockedTowers = new Set(['missile', 'aa', 'icbm_silo', 'wall_factory', 'recycler']);
+
+        Game.computePath();
+        Game.computeBuildSpots();
+        Game.initFlowGrid();
+        Game.state = 'playing';
+        document.getElementById('menuScreen').style.display = 'none';
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('btnSpeed').textContent = 'SPEED x1';
+        document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+        Game.renderTowerList();
+        Game.updateUI();
+
+        // Start music
+        if (Game.musicEnabled && Game.bgMusic) {
+            Game.bgMusic.currentTime = 0;
+            Game.bgMusic.play().catch(() => {});
+        }
+    },
+
+    computePath() {
+        const p = Game.map.path;
+        Game.pathSegments = [];
+        Game.pathTotalLength = 0;
+        for (let i = 0; i < p.length - 1; i++) {
+            const dx = p[i+1].x - p[i].x;
+            const dy = p[i+1].y - p[i].y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            Game.pathSegments.push({
+                x0: p[i].x, y0: p[i].y,
+                x1: p[i+1].x, y1: p[i+1].y,
+                len, startDist: Game.pathTotalLength
+            });
+            Game.pathTotalLength += len;
+        }
+    },
+
+    computeBuildSpots() {
+        // Generate a grid of valid building spots (cells not on the path and not on edges)
+        Game.buildGrid = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+            Game.buildGrid[c] = [];
+            for (let r = 0; r < GRID_ROWS; r++) {
+                const cx = c * GRID_SIZE + GRID_SIZE / 2;
+                const cy = r * GRID_SIZE + GRID_SIZE / 2;
+                // Check all four corners and center of grid cell
+                const margin = GRID_SIZE * 0.4;
+                const points = [
+                    {x: cx, y: cy},
+                    {x: cx - margin, y: cy - margin},
+                    {x: cx + margin, y: cy - margin},
+                    {x: cx - margin, y: cy + margin},
+                    {x: cx + margin, y: cy + margin}
+                ];
+                const onPath = points.some(p => Game.isOnPath(p.x, p.y));
+                const onEdge = cx < GRID_SIZE/2 || cx > CW - GRID_SIZE/2 || cy < GRID_SIZE/2 || cy > CH - GRID_SIZE/2;
+                Game.buildGrid[c][r] = !onPath && !onEdge;
+            }
+        }
+    },
+
+    getPathPos(distance) {
+        let d = distance;
+        for (const seg of Game.pathSegments) {
+            if (d <= seg.len) {
+                const t = d / seg.len;
+                return { x: lerp(seg.x0, seg.x1, t), y: lerp(seg.y0, seg.y1, t) };
+            }
+            d -= seg.len;
+        }
+        const last = Game.map.path[Game.map.path.length - 1];
+        return { x: last.x, y: last.y };
+    },
+
+    isOnPath(x, y) {
+        const w = Game.map.pathWidth / 2 + 4;
+        for (const seg of Game.pathSegments) {
+            const dx = seg.x1 - seg.x0;
+            const dy = seg.y1 - seg.y0;
+            const l2 = seg.len * seg.len;
+            const t = clamp(((x - seg.x0) * dx + (y - seg.y0) * dy) / l2, 0, 1);
+            const px = seg.x0 + t * dx;
+            const py = seg.y0 + t * dy;
+            if (Math.hypot(x - px, y - py) < w) return true;
+        }
+        return false;
+    },
+
+    isOnWall(x, y) {
+        const hs = GRID_SIZE / 2;
+        for (const wall of Game.walls) {
+            if (Math.abs(x - wall.x) < hs && Math.abs(y - wall.y) < hs) return true;
+        }
+        return false;
+    },
+
+    isOnTower(x, y) {
+        const g = snapToGrid(x, y);
+        for (const t of Game.towers) {
+            const tg = snapToGrid(t.x, t.y);
+            const tw = (t.def && t.def.gridW) || 1;
+            const th = (t.def && t.def.gridH) || 1;
+            // The tower center is in the middle of its footprint, find its origin col/row
+            const oc = Math.round((t.x - (tw * GRID_SIZE) / 2) / GRID_SIZE);
+            const or2 = Math.round((t.y - (th * GRID_SIZE) / 2) / GRID_SIZE);
+            if (g.col >= oc && g.col < oc + tw && g.row >= or2 && g.row < or2 + th) return true;
+        }
+        return false;
+    },
+
+    canPlace(x, y, def) {
+        const g = snapToGrid(x, y);
+        const gw = (def && def.gridW) || 1;
+        const gh = (def && def.gridH) || 1;
+        // Check all cells in the footprint
+        for (let dc = 0; dc < gw; dc++) {
+            for (let dr = 0; dr < gh; dr++) {
+                const cc = g.col + dc;
+                const rr = g.row + dr;
+                if (cc >= GRID_COLS || rr >= GRID_ROWS) return false;
+                if (!Game.buildGrid || !Game.buildGrid[cc] || !Game.buildGrid[cc][rr]) return false;
+                // Check no existing tower on this grid cell
+                for (const t of Game.towers) {
+                    const tgw = (t.def && t.def.gridW) || 1;
+                    const tgh = (t.def && t.def.gridH) || 1;
+                    // Compute origin col/row from tower center position
+                    const toc = Math.round((t.x - (tgw * GRID_SIZE) / 2) / GRID_SIZE);
+                    const tor = Math.round((t.y - (tgh * GRID_SIZE) / 2) / GRID_SIZE);
+                    // Check overlap between footprints
+                    if (cc >= toc && cc < toc + tgw && rr >= tor && rr < tor + tgh) return false;
+                }
+            }
+        }
+        return true;
+    },
+
+    // ============================================================
+    // FLOW FIELD PATHFINDING
+    // ============================================================
+    initFlowGrid() {
+        const cs = Game.flowCellSize;
+        Game.flowCols = Math.ceil(CW / cs);
+        Game.flowRows = Math.ceil(CH / cs);
+        Game.flowGrid = [];
+        const halfWidth = Game.map.pathWidth / 2;
+        for (let c = 0; c < Game.flowCols; c++) {
+            Game.flowGrid[c] = [];
+            for (let r = 0; r < Game.flowRows; r++) {
+                const cx = c * cs + cs / 2;
+                const cy = r * cs + cs / 2;
+                let onPath = false;
+                for (const seg of Game.pathSegments) {
+                    const dx = seg.x1 - seg.x0;
+                    const dy = seg.y1 - seg.y0;
+                    const l2 = seg.len * seg.len;
+                    const t = clamp(((cx - seg.x0) * dx + (cy - seg.y0) * dy) / l2, 0, 1);
+                    const px = seg.x0 + t * dx;
+                    const py = seg.y0 + t * dy;
+                    if (Math.hypot(cx - px, cy - py) < halfWidth) { onPath = true; break; }
+                }
+                // Compute distance to nearest path center for center-bias
+                let minPathDist = Infinity;
+                if (onPath) {
+                    for (const seg of Game.pathSegments) {
+                        const sdx = seg.x1 - seg.x0;
+                        const sdy = seg.y1 - seg.y0;
+                        const sl2 = seg.len * seg.len;
+                        const st = clamp(((cx - seg.x0) * sdx + (cy - seg.y0) * sdy) / sl2, 0, 1);
+                        const spx = seg.x0 + st * sdx;
+                        const spy = seg.y0 + st * sdy;
+                        const sd = Math.hypot(cx - spx, cy - spy);
+                        if (sd < minPathDist) minPathDist = sd;
+                    }
+                }
+                // Edge cost: cells far from center cost more (0 at center, up to 3 at edge)
+                const edgeCost = onPath ? Math.round((minPathDist / halfWidth) * 3) : 0;
+                Game.flowGrid[c][r] = { walkable: onPath, blocked: false, dist: Infinity, dirX: 0, dirY: 0, edgeCost };
+            }
+        }
+        Game.flowDirty = true;
+        Game.computeFlowField();
+    },
+
+    computeFlowField() {
+        const grid = Game.flowGrid;
+        const cols = Game.flowCols;
+        const rows = Game.flowRows;
+        const cs = Game.flowCellSize;
+        // Reset
+        for (let c = 0; c < cols; c++)
+            for (let r = 0; r < rows; r++) { grid[c][r].dist = Infinity; grid[c][r].dirX = 0; grid[c][r].dirY = 0; }
+
+        const exitPt = Game.map.path[Game.map.path.length - 1];
+        const queue = [];
+
+        // Seed exit cells (handle off-screen exits)
+        const seedCell = (c, r) => {
+            if (c >= 0 && c < cols && r >= 0 && r < rows && grid[c][r].walkable && !grid[c][r].blocked && grid[c][r].dist === Infinity) {
+                grid[c][r].dist = 0; queue.push([c, r]);
+            }
+        };
+        for (let dc = -2; dc <= 2; dc++)
+            for (let dr = -2; dr <= 2; dr++)
+                seedCell(clamp(Math.floor(exitPt.x / cs) + dc, 0, cols - 1), clamp(Math.floor(exitPt.y / cs) + dr, 0, rows - 1));
+
+        if (exitPt.x >= CW) for (let r = 0; r < rows; r++) seedCell(cols - 1, r);
+        if (exitPt.y >= CH) for (let c = 0; c < cols; c++) seedCell(c, rows - 1);
+        if (exitPt.x < 0) for (let r = 0; r < rows; r++) seedCell(0, r);
+        if (exitPt.y < 0) for (let c = 0; c < cols; c++) seedCell(c, 0);
+
+        // BFS
+        const dirs8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+        let head = 0;
+        while (head < queue.length) {
+            const [cc, cr] = queue[head++];
+            const curDist = grid[cc][cr].dist;
+            for (const [dc, dr] of dirs8) {
+                const nc = cc + dc, nr = cr + dr;
+                if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue;
+                const nb = grid[nc][nr];
+                if (!nb.walkable || nb.blocked) continue;
+                const nd = curDist + 1 + nb.edgeCost;
+                if (nd < nb.dist) { nb.dist = nd; queue.push([nc, nr]); }
+            }
+        }
+
+        // Direction vectors (steepest descent toward exit)
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const cell = grid[c][r];
+                if (!cell.walkable || cell.blocked || cell.dist === Infinity) continue;
+                let best = cell.dist, bx = 0, by = 0;
+                for (const [dc, dr] of dirs8) {
+                    const nc = c + dc, nr = r + dr;
+                    if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue;
+                    if (grid[nc][nr].dist < best) { best = grid[nc][nr].dist; bx = dc; by = dr; }
+                }
+                const len = Math.hypot(bx, by);
+                if (len > 0) { cell.dirX = bx / len; cell.dirY = by / len; }
+                else {
+                    // Local minimum: point toward exit as fallback
+                    const cx = c * Game.flowCellSize + Game.flowCellSize/2;
+                    const cy = r * Game.flowCellSize + Game.flowCellSize/2;
+                    const ex = Game.map.path[Game.map.path.length-1].x;
+                    const ey = Game.map.path[Game.map.path.length-1].y;
+                    const dl = Math.hypot(ex - cx, ey - cy);
+                    if (dl > 0) { cell.dirX = (ex - cx) / dl; cell.dirY = (ey - cy) / dl; }
+                }
+            }
+        }
+        Game.flowDirty = false;
+    },
+
+    flowCellAt(px, py) {
+        const cs = Game.flowCellSize;
+        const c = Math.floor(px / cs), r = Math.floor(py / cs);
+        if (c < 0 || c >= Game.flowCols || r < 0 || r >= Game.flowRows) return null;
+        return Game.flowGrid[c][r];
+    },
+
+    markWallCells(wx, wy, blocked) {
+        const cs = Game.flowCellSize;
+        const half = GRID_SIZE / 2;
+        const c0 = Math.max(0, Math.floor((wx - half) / cs));
+        const c1 = Math.min(Game.flowCols - 1, Math.floor((wx + half) / cs));
+        const r0 = Math.max(0, Math.floor((wy - half) / cs));
+        const r1 = Math.min(Game.flowRows - 1, Math.floor((wy + half) / cs));
+        for (let c = c0; c <= c1; c++)
+            for (let r = r0; r <= r1; r++)
+                Game.flowGrid[c][r].blocked = blocked;
+    },
+
+    findNearestWall(enemy) {
+        let nearest = null, nd = Infinity;
+        for (const w of Game.walls) {
+            const d = Math.hypot(enemy.x - w.x, enemy.y - w.y);
+            if (d < nd) { nd = d; nearest = w; }
+        }
+        return nearest;
+    },
+
+    handleClick(e) {
+        if (Game.state !== 'playing') return;
+        const mx = Game.mouse.x;
+        const my = Game.mouse.y;
+
+        // Active ability
+        if (Game.activeAbility === 'nuke' && Game.nukeCooldown <= 0) {
+            Game.doNuke(mx, my);
+            Game.activeAbility = null;
+            return;
+        }
+        if (Game.activeAbility === 'wall' && Game.wallCooldown <= 0) {
+            Game.doWall(mx, my);
+            Game.activeAbility = null;
+            return;
+        }
+        if (Game.activeAbility === 'freeze' && Game.freezeCooldown <= 0) {
+            Game.doFreeze(mx, my);
+            Game.activeAbility = null;
+            return;
+        }
+
+        // Sell mode
+        if (Game.sellMode) {
+            const t = Game.getTowerAt(mx, my);
+            if (t) {
+                const sellPrice = Math.floor(t.cost * 0.5);
+                Game.money += sellPrice;
+                Game.effects.push({type:'text', x:t.x, y:t.y-20, text:'+$'+sellPrice, color:'#ffd700', life:60});
+                if (t.def.building === 'recycler') Game.recyclerCount--;
+                if (t.def.building === 'radar') {
+                    Game.radarTowers = Game.radarTowers.filter(r => r !== t);
+                }
+                Game.towers = Game.towers.filter(tw => tw !== t);
+                Game.updateUI();
+            }
+            return;
+        }
+
+        // Place tower (snap to grid)
+        if (Game.selectedTowerDef) {
+            const g = snapToGrid(mx, my);
+            const def = Game.selectedTowerDef;
+            const gw = def.gridW || 1;
+            const gh = def.gridH || 1;
+            // Center of the multi-cell footprint
+            const cx = g.col * GRID_SIZE + (gw * GRID_SIZE) / 2;
+            const cy = g.row * GRID_SIZE + (gh * GRID_SIZE) / 2;
+            if (Game.canPlace(mx, my, def) && Game.money >= def.cost) {
+                Game.placeTower(def, cx, cy);
+            }
+            return;
+        }
+
+        // Select existing tower for info
+        const t = Game.getTowerAt(mx, my);
+        if (t) {
+            Game.hoveredTower = t;
+            Game.showTowerInfo(t);
+        } else {
+            Game.hoveredTower = null;
+            document.getElementById('towerInfo').style.display = 'none';
+        }
+    },
+
+    getTowerAt(x, y) {
+        for (const t of Game.towers) {
+            const tw = (t.def && t.def.gridW) || 1;
+            const th = (t.def && t.def.gridH) || 1;
+            const halfW = (tw * GRID_SIZE) / 2;
+            const halfH = (th * GRID_SIZE) / 2;
+            if (Math.abs(x - t.x) < halfW && Math.abs(y - t.y) < halfH) return t;
+        }
+        return null;
+    },
+
+    placeTower(def, x, y) {
+        Game.money -= def.cost;
+        const tower = {
+            x, y, def,
+            cost: def.cost,
+            range: def.range,
+            damage: def.damage,
+            rate: def.rate,
+            cooldown: 0,
+            angle: 0,
+            target: null,
+            kills: 0,
+        };
+
+        // Apply radar bonuses (+10% range & damage per radar)
+        for (const radar of Game.radarTowers) {
+            if (dist(tower, radar) < radar.range) {
+                tower.range *= 1.10;
+                tower.damage *= 1.10;
+            }
+        }
+
+        Game.towers.push(tower);
+
+        // Track build counts
+        Game.buildCounts[def.id] = (Game.buildCounts[def.id] || 0) + 1;
+
+        // Building effects
+        if (def.building === 'recycler') Game.recyclerCount++;
+        if (def.building === 'radar') {
+            Game.radarTowers.push(tower);
+            // Boost existing towers in range
+            for (const t of Game.towers) {
+                if (t !== tower && dist(t, tower) < tower.range) {
+                    t.range *= 1.10;
+                    t.damage *= 1.10;
+                }
+            }
+        }
+
+        // Check unlocks
+        Game.checkUnlocks();
+        Game.updateUI();
+        Game.renderTowerList();
+
+        Game.effects.push({type:'ring', x, y, radius:0, maxRadius:30, color: def.color, life:20});
+    },
+
+    checkUnlocks() {
+        for (const tab of TOWER_DEFS) {
+            for (const def of tab) {
+                if (Game.unlockedTowers.has(def.id)) continue;
+                if (!def.unlockReq) { Game.unlockedTowers.add(def.id); continue; }
+
+                const req = def.unlockReq;
+                if (req.type === 'build' && (Game.buildCounts[req.tower] || 0) >= req.count) {
+                    Game.unlockedTowers.add(def.id);
+                }
+                if (req.type === 'build_type' && (Game.buildCounts[req.tower] || 0) >= req.count) {
+                    Game.unlockedTowers.add(def.id);
+                }
+                if (req.type === 'money' && Game.money >= req.amount) {
+                    Game.unlockedTowers.add(def.id);
+                }
+                if (req.type === 'wave' && Game.wave >= req.wave) {
+                    Game.unlockedTowers.add(def.id);
+                }
+            }
+        }
+    },
+
+    showTowerInfo(t) {
+        const info = document.getElementById('towerInfo');
+        info.style.display = 'block';
+        document.getElementById('tiName').textContent = t.def.name;
+        document.getElementById('tiRange').textContent = t.def.range > 0 ? 'Range: ' + Math.round(t.range) : '';
+        document.getElementById('tiDamage').textContent = t.def.damage > 0 ? 'Damage: ' + Math.round(t.damage) : '';
+        document.getElementById('tiRate').textContent = t.def.rate > 0 ? 'Fire Rate: ' + (60/t.rate).toFixed(1) + '/s' : '';
+        document.getElementById('tiSpecial').textContent = t.def.desc;
+    },
+
+    cancelSelection() {
+        Game.selectedTowerDef = null;
+        Game.sellMode = false;
+        Game.activeAbility = null;
+        Game.hoveredTower = null;
+        document.getElementById('btnSell').classList.remove('sell-mode');
+        document.getElementById('towerInfo').style.display = 'none';
+        document.querySelectorAll('.tower-item').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('.ability-btn').forEach(el => el.classList.remove('active-ability'));
+    },
+
+    sendWave() {
+        if (Game.state !== 'playing') return;
+        if (Game.pendingWave.length > 0) return; // wave in progress
+        if (Game.wave >= Game.maxWaves) return;
+
+        Game.wave++;
+        Game.waveTimer = Game.waveDelay;
+        Game.pendingWave = generateWave(Game.wave, Game.difficulty);
+        Game.spawnTimer = 0;
+        Game.checkUnlocks();
+        Game.updateUI();
+    },
+
+    activateAbility(type) {
+        if (Game.state !== 'playing') return;
+        const hasBuilding = (buildingType) => Game.towers.some(t => t.def.building === buildingType);
+
+        if (type === 'nuke' && hasBuilding('nuke') && Game.nukeCooldown <= 0) {
+            Game.activeAbility = Game.activeAbility === 'nuke' ? null : 'nuke';
+        }
+        if (type === 'wall' && hasBuilding('wall') && Game.wallCooldown <= 0) {
+            Game.activeAbility = Game.activeAbility === 'wall' ? null : 'wall';
+        }
+        if (type === 'freeze' && hasBuilding('lab') && Game.freezeCooldown <= 0) {
+            Game.activeAbility = Game.activeAbility === 'freeze' ? null : 'freeze';
+        }
+
+        Game.sellMode = false;
+        Game.selectedTowerDef = null;
+        document.getElementById('btnSell').classList.remove('sell-mode');
+        document.querySelectorAll('.ability-btn').forEach(el => el.classList.remove('active-ability'));
+        if (Game.activeAbility) {
+            const btnId = Game.activeAbility === 'nuke' ? 'abilNuke' : Game.activeAbility === 'wall' ? 'abilWall' : 'abilFreeze';
+            document.getElementById(btnId).classList.add('active-ability');
+        }
+    },
+
+    doNuke(x, y) {
+        Game.nukeCooldown = Game.nukeCooldownMax;
+        const radius = 120;
+        const damage = 500 + Game.wave * 30;
+        // Launch ICBM from center bottom to target area
+        Game.effects.push({
+            type: 'icbm',
+            startX: CW / 2, startY: CH + 20,
+            targetX: x, targetY: y,
+            progress: 0,
+            speed: 0.012,
+            radius,
+            damage,
+            life: 200
+        });
+    },
+
+    doWall(rawX, rawY) {
+        // Snap wall position to grid
+        const wg = snapToGrid(rawX, rawY);
+        const x = wg.x, y = wg.y;
+        if (!Game.isOnPath(x, y)) return; // walls go on path
+        if (Game.isOnWall(x, y)) return;
+        // Check if wall would completely block the path
+        Game.markWallCells(x, y, true);
+        Game.computeFlowField();
+        // Verify entry point can still reach exit
+        const entryPt = Game.map.path[0];
+        const cs = Game.flowCellSize;
+        const ec = clamp(Math.floor(entryPt.x / cs), 0, Game.flowCols - 1);
+        const er = clamp(Math.floor(entryPt.y / cs), 0, Game.flowRows - 1);
+        const entryCell = Game.flowGrid[ec][er];
+        if (entryCell.dist === Infinity) {
+            // Would block path — revert
+            Game.markWallCells(x, y, false);
+            Game.computeFlowField();
+            Game.effects.push({type:'text', x, y: y-10, text:'PATH BLOCKED!', color:'#f55', life:60});
+            return;
+        }
+        Game.wallCooldown = Game.wallCooldownMax;
+        Game.walls.push({x, y, hp: 200 + Game.wave * 10});
+        Game.buildCounts['wall'] = (Game.buildCounts['wall'] || 0) + 1;
+        // Mark wall cell as buildable so towers can be placed on top
+        if (Game.buildGrid && Game.buildGrid[wg.col]) {
+            Game.buildGrid[wg.col][wg.row] = true;
+        }
+        Game.effects.push({type:'ring', x, y, radius:0, maxRadius:20, color:'#888', life:15});
+    },
+
+    doFreeze(x, y) {
+        Game.freezeCooldown = Game.freezeCooldownMax;
+        const radius = 120;
+        for (const e of Game.enemies) {
+            if (dist({x,y}, e) < radius) {
+                e.frozen = 180; // 3 seconds
+            }
+        }
+        Game.effects.push({type:'freeze_ring', x, y, radius:0, maxRadius:radius, life:30});
+    },
+
+    // ============================================================
+    // UPDATE LOOP
+    // ============================================================
+    update() {
+        if (Game.state !== 'playing') return;
+
+        for (let sp = 0; sp < Game.speedMult; sp++) {
+            Game.updateOnce();
+        }
+    },
+
+    updateOnce() {
+        // Recompute flow field if dirty
+        if (Game.flowDirty && Game.flowGrid) {
+            for (let c = 0; c < Game.flowCols; c++)
+                for (let r = 0; r < Game.flowRows; r++)
+                    Game.flowGrid[c][r].blocked = false;
+            for (const w of Game.walls) Game.markWallCells(w.x, w.y, true);
+            Game.computeFlowField();
+        }
+
+        // Cooldowns
+        if (Game.nukeCooldown > 0) Game.nukeCooldown--;
+        if (Game.wallCooldown > 0) Game.wallCooldown--;
+        if (Game.freezeCooldown > 0) Game.freezeCooldown--;
+
+        // Wave timer
+        if (Game.pendingWave.length === 0 && Game.enemies.length === 0 && Game.wave < Game.maxWaves) {
+            Game.waveTimer--;
+            if (Game.waveTimer <= 0) {
+                Game.sendWave();
+            }
+        }
+
+        // Spawn enemies
+        if (Game.pendingWave.length > 0) {
+            Game.spawnTimer--;
+            if (Game.spawnTimer <= 0) {
+                const def = Game.pendingWave.shift();
+                const sp = Game.map.path[0];
+                const seg0 = Game.pathSegments[0];
+                const segA = Math.atan2(seg0.y1 - seg0.y0, seg0.x1 - seg0.x0);
+                const lateralOff = rand(-Game.map.pathWidth / 4, Game.map.pathWidth / 4);
+                Game.enemies.push({
+                    ...def,
+                    x: sp.x + (-Math.sin(segA)) * lateralOff,
+                    y: sp.y + Math.cos(segA) * lateralOff,
+                    maxHp: def.hp,
+                    distance: 0,
+                    flowDist: Infinity,
+                    frozen: 0,
+                    slowTimer: 0,
+                    slowMult: 1,
+                    nullified: 0,
+                    alive: true,
+                    heading: segA,
+                    stuckTicks: 0,
+                    lastPosX: sp.x,
+                    lastPosY: sp.y,
+                });
+                Game.spawnTimer = def.spawnDelay || 30;
+            }
+        }
+
+        // Jammer check - find jammer ranges
+        const jammerZones = Game.enemies.filter(e => e.jammer && e.alive).map(e => ({x:e.x, y:e.y, r: e.jamRange || 80}));
+
+        // Update towers
+        for (const tower of Game.towers) {
+            if (tower.def.special === 'building' && tower.def.building !== 'radar') continue;
+            if (tower.def.building === 'radar') continue;
+
+            // Check if jammed
+            let jammed = false;
+            for (const jz of jammerZones) {
+                if (dist(tower, jz) < jz.r) { jammed = true; break; }
+            }
+            if (jammed) continue;
+
+            tower.cooldown--;
+
+            // Find target (furthest along path in range)
+            tower.target = null;
+            for (const e of Game.enemies) {
+                if (!e.alive) continue;
+                const canTarget = tower.def.target === 'both' ||
+                    (tower.def.target === 'ground' && !e.flying) ||
+                    (tower.def.target === 'air' && e.flying);
+                if (!canTarget) continue;
+                const d = dist(tower, e);
+                const eFD = e.flowDist !== undefined ? e.flowDist : Infinity;
+                const tFD = tower.target && tower.target.flowDist !== undefined ? tower.target.flowDist : Infinity;
+                if (d < tower.range && eFD < tFD) {
+                    tower.target = e;
+                }
+            }
+
+            if (tower.target) {
+                tower.angle = angleTo(tower, tower.target);
+
+                if (tower.cooldown <= 0) {
+                    tower.cooldown = tower.rate;
+                    Game.fireTower(tower);
+                }
+            }
+        }
+
+        // Update enemies
+        for (const e of Game.enemies) {
+            if (!e.alive) continue;
+
+            // Frozen
+            if (e.frozen > 0) { e.frozen--; continue; }
+
+            // Autorepair
+            if (e.autorepair > 0 && e.nullified <= 0) {
+                e.hp = Math.min(e.maxHp, e.hp + e.autorepair);
+            }
+
+            // Nullify timer
+            if (e.nullified > 0) e.nullified--;
+
+            // Slow
+            if (e.slowTimer > 0) { e.slowTimer--; }
+            else { e.slowMult = 1; }
+
+            // Move
+            let spd = e.speed * e.slowMult;
+            if (e.nullified > 0) spd = Math.min(spd, e.speed * 0.8);
+
+            const exitPt = Game.map.path[Game.map.path.length - 1];
+
+            if (e.flying) {
+                // Flying enemies still use center-line path
+                e.distance += spd;
+                const pos = Game.getPathPos(e.distance);
+                if (pos.x !== e.x || pos.y !== e.y) e.heading = Math.atan2(pos.y - e.y, pos.x - e.x);
+                e.x = pos.x; e.y = pos.y;
+                e.flowDist = Math.max(0, Game.pathTotalLength - e.distance);
+                if (e.distance >= Game.pathTotalLength) {
+                    e.alive = false; Game.lives--;
+                    Game.effects.push({type:'text', x:e.x, y:e.y-10, text:'-1 LIFE', color:'#f55', life:90});
+                    if (Game.lives <= 0) { Game.gameOver(false); return; }
+                }
+            } else if (e.x < 0 || e.x >= CW || e.y < 0 || e.y >= CH) {
+                // Off-screen: move toward first on-screen waypoint
+                const tgt = Game.map.path[1];
+                const dx = tgt.x - e.x, dy = tgt.y - e.y, d = Math.hypot(dx, dy);
+                if (d > 0) { e.x += (dx/d)*spd; e.y += (dy/d)*spd; e.heading = Math.atan2(dy, dx); }
+                e.flowDist = Infinity;
+            } else {
+                // Ground enemies use flow field
+                const cell = Game.flowCellAt(e.x, e.y);
+                const prevX = e.x, prevY = e.y;
+                if (cell && cell.walkable && !cell.blocked && cell.dist !== Infinity) {
+                    // Sample flow direction from nearby cells for smoother cornering
+                    let mx = cell.dirX, my = cell.dirY;
+                    const fcs = Game.flowCellSize;
+                    let samples = 1;
+                    for (const [ox, oy] of [[spd,0],[-spd,0],[0,spd],[0,-spd]]) {
+                        const sc = Game.flowCellAt(e.x + ox, e.y + oy);
+                        if (sc && sc.walkable && !sc.blocked && sc.dist !== Infinity) {
+                            mx += sc.dirX; my += sc.dirY; samples++;
+                        }
+                    }
+                    mx /= samples; my /= samples;
+                    // Separation force
+                    let sx = 0, sy = 0;
+                    for (const o of Game.enemies) {
+                        if (o === e || !o.alive || o.flying) continue;
+                        const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy);
+                        if (d > 0 && d < 12) { const f = (12-d)/12; sx += (dx/d)*f; sy += (dy/d)*f; }
+                    }
+                    mx = mx * 0.85 + sx * 0.15; my = my * 0.85 + sy * 0.15;
+                    const ml = Math.hypot(mx, my);
+                    if (ml > 0) { mx /= ml; my /= ml; }
+                    const nx = e.x + mx*spd, ny = e.y + my*spd;
+                    const nc = Game.flowCellAt(nx, ny);
+                    if (nc && nc.walkable && !nc.blocked) {
+                        if (nx !== e.x || ny !== e.y) e.heading = Math.atan2(ny - e.y, nx - e.x);
+                        e.x = nx; e.y = ny;
+                    } else {
+                        // If direct move blocked, try sliding along each axis
+                        const ncx = Game.flowCellAt(nx, e.y);
+                        const ncy = Game.flowCellAt(e.x, ny);
+                        if (ncx && ncx.walkable && !ncx.blocked) {
+                            e.heading = Math.atan2(0, nx - e.x);
+                            e.x = nx;
+                        } else if (ncy && ncy.walkable && !ncy.blocked) {
+                            e.heading = Math.atan2(ny - e.y, 0);
+                            e.y = ny;
+                        }
+                    }
+                    e.flowDist = cell.dist;
+                } else if (Game.walls.length > 0) {
+                    // Blocked: attack nearest wall
+                    const nw = Game.findNearestWall(e);
+                    if (nw) {
+                        const dx = nw.x - e.x, dy = nw.y - e.y, d = Math.hypot(dx, dy);
+                        if (d > 10) { e.x += (dx/d)*spd; e.y += (dy/d)*spd; e.heading = Math.atan2(dy, dx); }
+                        else { nw.hp -= 0.5; if (nw.hp <= 0) {
+                            // Revert buildGrid cell when wall destroyed (unless tower is there)
+                            const dwg = snapToGrid(nw.x, nw.y);
+                            if (Game.buildGrid && Game.buildGrid[dwg.col]) {
+                                Game.buildGrid[dwg.col][dwg.row] = false;
+                            }
+                            Game.walls = Game.walls.filter(w=>w!==nw); Game.flowDirty = true;
+                        } }
+                    }
+                    e.flowDist = Infinity;
+                } else {
+                    // No valid cell and no walls: nudge toward nearest path waypoint
+                    let bestD = Infinity, bpx = exitPt.x, bpy = exitPt.y;
+                    for (const wp of Game.map.path) {
+                        const dd = Math.hypot(wp.x - e.x, wp.y - e.y);
+                        if (dd > 5 && dd < bestD) { bestD = dd; bpx = wp.x; bpy = wp.y; }
+                    }
+                    const dx = bpx - e.x, dy = bpy - e.y, d = Math.hypot(dx, dy);
+                    if (d > 0) { e.x += (dx/d)*spd; e.y += (dy/d)*spd; e.heading = Math.atan2(dy, dx); }
+                    e.flowDist = Infinity;
+                }
+                // Stuck detection: if enemy barely moved, increment stuck counter
+                const movedDist = Math.hypot(e.x - prevX, e.y - prevY);
+                if (movedDist < spd * 0.1) {
+                    e.stuckTicks = (e.stuckTicks || 0) + 1;
+                } else {
+                    e.stuckTicks = 0;
+                }
+                // Recovery: back up along reverse heading then try a wider angle
+                if (e.stuckTicks > 30) {
+                    const reverseAng = e.heading + Math.PI;
+                    // Try backing up with increasing lateral offset
+                    const jitter = ((e.stuckTicks % 60) - 30) / 30 * Math.PI * 0.5;
+                    const ang = reverseAng + jitter;
+                    const bx = e.x + Math.cos(ang) * spd * 2;
+                    const by = e.y + Math.sin(ang) * spd * 2;
+                    const bc = Game.flowCellAt(bx, by);
+                    if (bc && bc.walkable && !bc.blocked) {
+                        e.x = bx; e.y = by;
+                        e.heading = ang;
+                    } else {
+                        // If reverse fails, try perpendicular directions
+                        for (const off of [Math.PI/2, -Math.PI/2, Math.PI/3, -Math.PI/3]) {
+                            const pa = e.heading + off;
+                            const px = e.x + Math.cos(pa) * spd * 2;
+                            const py = e.y + Math.sin(pa) * spd * 2;
+                            const pc = Game.flowCellAt(px, py);
+                            if (pc && pc.walkable && !pc.blocked) {
+                                e.x = px; e.y = py;
+                                e.heading = pa;
+                                break;
+                            }
+                        }
+                    }
+                    // Hard reset after being stuck too long: teleport to nearest walkable path cell
+                    if (e.stuckTicks > 120) {
+                        let bestWalk = null, bestWalkD = Infinity;
+                        const cs = Game.flowCellSize;
+                        for (let c = 0; c < Game.flowCols; c++) {
+                            for (let r = 0; r < Game.flowRows; r++) {
+                                const fc = Game.flowGrid[c][r];
+                                if (fc.walkable && !fc.blocked && fc.dist !== Infinity) {
+                                    const cx = c * cs + cs/2, cy = r * cs + cs/2;
+                                    const dd = Math.hypot(cx - e.x, cy - e.y);
+                                    if (dd > 10 && dd < bestWalkD) { bestWalkD = dd; bestWalk = {x: cx, y: cy}; }
+                                }
+                            }
+                        }
+                        if (bestWalk) { e.x = bestWalk.x; e.y = bestWalk.y; }
+                        e.stuckTicks = 0;
+                    }
+                }
+                // Exit check for ground enemies
+                const dExit = Math.hypot(e.x - exitPt.x, e.y - exitPt.y);
+                const ec = Game.flowCellAt(e.x, e.y);
+                if (dExit < 15 || (ec && ec.dist === 0)) {
+                    e.alive = false; Game.lives--;
+                    Game.effects.push({type:'text', x:e.x, y:e.y-10, text:'-1 LIFE', color:'#f55', life:90});
+                    if (Game.lives <= 0) { Game.gameOver(false); return; }
+                }
+            }
+        }
+
+        // Update projectiles
+        for (const p of Game.projectiles) {
+            p.life--;
+            if (p.life <= 0) { p.alive = false; continue; }
+
+            if (p.homing && p.target && p.target.alive) {
+                const a = angleTo(p, p.target);
+                p.vx = Math.cos(a) * p.speed;
+                p.vy = Math.sin(a) * p.speed;
+            }
+
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Check hit
+            if (p.target && p.target.alive) {
+                if (dist(p, p.target) < p.target.size + 4) {
+                    Game.hitEnemy(p.target, p);
+                    p.alive = false;
+                }
+            }
+            // Tesla/AOE - hits all in range each tick
+            if (p.aoe) {
+                for (const e of Game.enemies) {
+                    if (!e.alive) continue;
+                    if (dist(p, e) < p.aoeRadius) {
+                        Game.hitEnemy(e, p);
+                    }
+                }
+                p.alive = false;
+            }
+        }
+
+        // Remove dead
+        Game.enemies = Game.enemies.filter(e => e.alive);
+        Game.projectiles = Game.projectiles.filter(p => p.alive);
+
+        // Effects
+        for (const fx of Game.effects) {
+            fx.life--;
+            // ICBM flight logic
+            if (fx.type === 'icbm') {
+                fx.progress += fx.speed;
+                if (fx.progress >= 1) {
+                    // ICBM has arrived - detonate
+                    const tx = fx.targetX, ty = fx.targetY;
+                    for (const e of Game.enemies) {
+                        const d = dist({x:tx,y:ty}, e);
+                        if (d < fx.radius) {
+                            e.hp -= fx.damage * (1 - e.shield);
+                            if (e.hp <= 0 && e.alive) {
+                                e.alive = false;
+                                Game.onEnemyKill(e, null);
+                            }
+                        }
+                    }
+                    // Nuclear flash - brief white screen flash
+                    Game.effects.push({type:'nuke_flash', x:tx, y:ty, life:12});
+                    Game.effects.push({type:'explosion', x:tx, y:ty, radius:0, maxRadius:fx.radius, color:'#f84', life:40});
+                    Game.effects.push({type:'explosion', x:tx, y:ty, radius:0, maxRadius:fx.radius*0.6, color:'#ff0', life:30});
+                    Game.effects.push({type:'shake', life:15, intensity:10});
+                    fx.life = 0; // remove icbm effect
+                }
+            }
+        }
+        Game.effects = Game.effects.filter(fx => fx.life > 0);
+
+        // Check wave complete / victory
+        if (Game.wave >= Game.maxWaves && Game.enemies.length === 0 && Game.pendingWave.length === 0) {
+            Game.gameOver(true);
+        }
+
+        Game.updateUI();
+    },
+
+    fireTower(tower) {
+        const def = tower.def;
+        const target = tower.target;
+        if (!target) return;
+
+        if (def.special === 'aoe') {
+            // Tesla - damage all enemies in range
+            for (const e of Game.enemies) {
+                if (!e.alive) continue;
+                const canTarget = def.target === 'both' || (def.target === 'ground' && !e.flying) || (def.target === 'air' && e.flying);
+                if (canTarget && dist(tower, e) < tower.range) {
+                    Game.hitEnemy(e, {damage: tower.damage, pierce: false, slow: false, nullify: false, chain: false, tower});
+                }
+            }
+            Game.effects.push({type:'tesla', x:tower.x, y:tower.y, radius: tower.range, life:8});
+            Game.effects.push({type:'muzzle', x:tower.x, y:tower.y, color:'#59f', life:6});
+            return;
+        }
+
+        if (def.special === 'oilslow') {
+            // Oil spray - area slow
+            for (const e of Game.enemies) {
+                if (!e.alive || e.flying) continue;
+                if (dist(tower, e) < tower.range) {
+                    e.slowMult = def.slowAmount;
+                    e.slowTimer = 90;
+                    Game.hitEnemy(e, {damage: tower.damage, pierce: false, slow: false, nullify: false, chain: false, tower});
+                }
+            }
+            Game.effects.push({type:'oil', x:tower.x, y:tower.y, radius: tower.range, life:15});
+            return;
+        }
+
+        if (def.special === 'chain') {
+            // Chain gun - hit multiple targets
+            let targets = [target];
+            let last = target;
+            for (let i = 1; i < def.chainCount; i++) {
+                let closest = null;
+                let closestDist = 100;
+                for (const e of Game.enemies) {
+                    if (!e.alive || targets.includes(e) || e.flying) continue;
+                    const d = dist(last, e);
+                    if (d < closestDist) { closest = e; closestDist = d; }
+                }
+                if (closest) { targets.push(closest); last = closest; }
+            }
+            for (const t of targets) {
+                Game.hitEnemy(t, {damage: tower.damage, pierce: false, slow: false, nullify: false, chain: false, tower});
+                Game.effects.push({type:'line', x1:tower.x, y1:tower.y, x2:t.x, y2:t.y, color: def.color, life:6});
+            }
+            return;
+        }
+
+        // Muzzle flash
+        const mfAngle = angleTo(tower, target);
+        const mfDist = ((def.gridW || 1) > 1 ? 30 : 18);
+        Game.effects.push({
+            type:'muzzle', x: tower.x + Math.cos(mfAngle) * mfDist,
+            y: tower.y + Math.sin(mfAngle) * mfDist, color: def.color, life: 5
+        });
+
+        // Standard projectile
+        const angle = mfAngle;
+        const speed = 4;
+        Game.projectiles.push({
+            x: tower.x, y: tower.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            speed,
+            damage: tower.damage,
+            target,
+            homing: true,
+            alive: true,
+            life: 120,
+            color: def.color,
+            size: 5,
+            pierce: def.special === 'pierce',
+            slow: def.special === 'slow',
+            slowAmount: def.slowAmount || 0,
+            slowDuration: def.slowDuration || 0,
+            nullify: def.special === 'nullify',
+            splash: def.special === 'splash',
+            goosplash: def.special === 'goosplash',
+            splashRadius: def.splashRadius || 0,
+            tower,
+        });
+    },
+
+    hitEnemy(enemy, proj) {
+        let dmg = proj.damage;
+
+        // Shield reduction
+        if (enemy.shield > 0 && !proj.pierce && enemy.nullified <= 0) {
+            dmg *= (1 - enemy.shield);
+        }
+
+        enemy.hp -= dmg;
+
+        // Slow
+        if (proj.slow && proj.slowAmount) {
+            enemy.slowMult = proj.slowAmount;
+            enemy.slowTimer = proj.slowDuration || 120;
+        }
+
+        // Nullify
+        if (proj.nullify) {
+            enemy.nullified = 300; // 5 seconds
+            enemy.frozen = 0;
+        }
+
+        // Splash
+        if (proj.splash && proj.splashRadius) {
+            for (const e of Game.enemies) {
+                if (e === enemy || !e.alive) continue;
+                if (dist(enemy, e) < proj.splashRadius) {
+                    let sd = dmg * 0.5;
+                    e.hp -= sd;
+                    if (e.hp <= 0 && e.alive) {
+                        e.alive = false;
+                        Game.onEnemyKill(e, proj.tower);
+                    }
+                }
+            }
+            Game.effects.push({type:'ring', x:enemy.x, y:enemy.y, radius:0, maxRadius:proj.splashRadius, color:'#fa5', life:12});
+        }
+
+        // Goo splash - splash damage + slows all in radius
+        if (proj.goosplash && proj.splashRadius) {
+            for (const e of Game.enemies) {
+                if (e === enemy || !e.alive) continue;
+                if (dist(enemy, e) < proj.splashRadius) {
+                    let sd = dmg * 0.4;
+                    e.hp -= sd;
+                    e.slowMult = proj.slowAmount || 0.4;
+                    e.slowTimer = proj.slowDuration || 120;
+                    if (e.hp <= 0 && e.alive) {
+                        e.alive = false;
+                        Game.onEnemyKill(e, proj.tower);
+                    }
+                }
+            }
+            // Slow the primary target too
+            enemy.slowMult = proj.slowAmount || 0.4;
+            enemy.slowTimer = proj.slowDuration || 120;
+            Game.effects.push({type:'ring', x:enemy.x, y:enemy.y, radius:0, maxRadius:proj.splashRadius, color:'#5b5', life:12});
+        }
+
+        if (enemy.hp <= 0 && enemy.alive) {
+            enemy.alive = false;
+            Game.onEnemyKill(enemy, proj.tower);
+        }
+
+        // Hit effect
+        Game.effects.push({type:'hit', x:enemy.x, y:enemy.y, life:6, color: proj.color || '#fff'});
+    },
+
+    onEnemyKill(enemy, tower) {
+        const recyclerMult = 1 + Game.recyclerCount * 0.5;
+        const reward = Math.floor(enemy.reward * recyclerMult);
+        Game.money += reward;
+        Game.score += reward * 2;
+        Game.kills++;
+        if (tower) tower.kills++;
+
+        Game.effects.push({type:'text', x:enemy.x, y:enemy.y-12, text:'+$'+reward, color:'#ffd700', life:45});
+
+        // Death particles
+        for (let i = 0; i < 5; i++) {
+            Game.effects.push({
+                type:'particle', x:enemy.x, y:enemy.y,
+                vx: rand(-2,2), vy: rand(-2,2),
+                color: enemy.color, life: randInt(10,25), size: rand(2,4)
+            });
+        }
+    },
+
+    gameOver(won) {
+        Game.state = 'gameover';
+        if (Game.bgMusic) Game.bgMusic.pause();
+        const diffBonus = Game.difficulty === 'normal' ? 1.25 : Game.difficulty === 'hard' ? 1.5 : 1;
+        Game.score = Math.floor(Game.score * diffBonus);
+
+        document.getElementById('goTitle').textContent = won ? 'VICTORY!' : 'GAME OVER';
+        document.getElementById('goTitle').style.color = won ? '#4ecdc4' : '#e94560';
+        document.getElementById('goWave').textContent = 'Waves Survived: ' + Game.wave + '/' + Game.maxWaves;
+        document.getElementById('goScore').textContent = 'Final Score: ' + Game.score.toLocaleString();
+        document.getElementById('goKills').textContent = 'Enemies Destroyed: ' + Game.kills;
+        document.getElementById('gameOverScreen').style.display = 'flex';
+    },
+
+    showMenu() {
+        Game.state = 'menu';
+        if (Game.bgMusic) Game.bgMusic.pause();
+        document.getElementById('menuScreen').style.display = 'flex';
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('menuStep1').style.display = '';
+        document.getElementById('menuStep2').style.display = 'none';
+    },
+
+    // ============================================================
+    // RENDERING
+    // ============================================================
+    render() {
+        ctx.save();
+
+        // Shake effect
+        const shake = Game.effects.find(f => f.type === 'shake');
+        if (shake) {
+            const i = shake.intensity * (shake.life / 15);
+            ctx.translate(rand(-i, i), rand(-i, i));
+        }
+
+        // Background
+        ctx.fillStyle = Game.state === 'menu' ? '#1a1a2e' : Game.map.bgColor;
+        ctx.fillRect(0, 0, CW, CH);
+
+        if (Game.state === 'playing' || Game.state === 'gameover') {
+            Game.renderMap();
+            Game.renderBuildGrid();
+            Game.renderWalls();
+            Game.renderTowers();
+            Game.renderEnemies();
+            Game.renderProjectiles();
+            Game.renderEffects();
+            Game.renderPlacement();
+            Game.renderAbilityPreview();
+        }
+
+        ctx.restore();
+    },
+
+    renderMap() {
+        const map = Game.map;
+        const path = map.path;
+        const w = map.pathWidth;
+        const seed = Game.mapKey.charCodeAt(0);
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Terrain detail: scattered rocks and ground variation
+        for (let i = 0; i < 80; i++) {
+            const rx = ((seed * 137 + i * 97 + i*i*3) % CW);
+            const ry = ((seed * 251 + i * 173 + i*i*7) % CH);
+            if (!Game.isOnPath(rx, ry)) {
+                const sz = 2 + (i % 7);
+                const br = 40 + (i * 13 % 40);
+                // Rock shadow
+                ctx.fillStyle = `rgba(0,0,0,0.15)`;
+                ctx.beginPath(); ctx.ellipse(rx+1, ry+2, sz, sz*0.6, 0, 0, Math.PI*2); ctx.fill();
+                // Rock body
+                ctx.fillStyle = `rgb(${br+20},${br+10},${br})`;
+                ctx.beginPath(); ctx.ellipse(rx, ry, sz, sz*0.7, (i*37%360)*Math.PI/180, 0, Math.PI*2); ctx.fill();
+                // Highlight
+                ctx.fillStyle = `rgba(255,255,255,0.08)`;
+                ctx.beginPath(); ctx.ellipse(rx-1, ry-1, sz*0.5, sz*0.3, 0, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // Outer cliff shadow (depth effect)
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = w + 24;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Canyon cliff outer edge
+        ctx.strokeStyle = map.cliffColor;
+        ctx.lineWidth = w + 18;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Cliff mid layer (gradient look)
+        const midColor = lerpColor(map.cliffColor, map.groundColor, 0.5);
+        ctx.strokeStyle = midColor;
+        ctx.lineWidth = w + 10;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Inner cliff wall
+        ctx.strokeStyle = map.groundColor;
+        ctx.lineWidth = w + 4;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Path surface - sandy ground
+        ctx.strokeStyle = '#a08060';
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Path surface lighter center
+        ctx.strokeStyle = '#b89870';
+        ctx.lineWidth = w - 6;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Gravel texture on path
+        for (let i = 0; i < 120; i++) {
+            const seg = Game.pathSegments[i % Game.pathSegments.length];
+            const t = ((seed * 31 + i * 67) % 1000) / 1000;
+            const px = lerp(seg.x0, seg.x1, t);
+            const py = lerp(seg.y0, seg.y1, t);
+            const off = ((seed + i * 41) % (w-8)) - (w-8)/2;
+            const angle = Math.atan2(seg.y1 - seg.y0, seg.x1 - seg.x0);
+            const gx = px + Math.cos(angle + Math.PI/2) * off;
+            const gy = py + Math.sin(angle + Math.PI/2) * off;
+            const gs = 1 + (i % 3);
+            ctx.fillStyle = `rgba(${140+(i%30)},${110+(i%25)},${80+(i%20)},0.3)`;
+            ctx.beginPath(); ctx.arc(gx, gy, gs, 0, Math.PI*2); ctx.fill();
+        }
+
+        // Path edge groove lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 6]);
+        for (const side of [-1, 1]) {
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                const p0 = path[i];
+                const p1 = path[Math.min(i+1, path.length-1)];
+                const a = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+                const ox = Math.cos(a + Math.PI/2) * (w/2 - 2) * side;
+                const oy = Math.sin(a + Math.PI/2) * (w/2 - 2) * side;
+                if (i === 0) ctx.moveTo(p0.x + ox, p0.y + oy);
+                else ctx.lineTo(p0.x + ox, p0.y + oy);
+            }
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        ctx.restore();
+
+        // Entry/exit markers with background
+        for (const [label, pt, color] of [['ENTRY', path[0], '#4ecdc4'], ['EXIT', path[path.length-1], '#e94560']]) {
+            const lx = clamp(pt.x, 30, CW-30);
+            const ly = clamp(pt.y - 28, 15, CH-5);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(lx - 24, ly - 9, 48, 14);
+            ctx.fillStyle = color;
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, lx, ly);
+        }
+    },
+
+    renderBuildGrid() {
+        if (!Game.buildGrid || !Game.selectedTowerDef) return;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 0.5;
+        for (let c = 0; c < GRID_COLS; c++) {
+            for (let r = 0; r < GRID_ROWS; r++) {
+                if (Game.buildGrid[c][r]) {
+                    // Check not already occupied by a tower
+                    let occupied = false;
+                    for (const t of Game.towers) {
+                        const tw = (t.def && t.def.gridW) || 1;
+                        const th = (t.def && t.def.gridH) || 1;
+                        const oc = Math.round((t.x - (tw * GRID_SIZE) / 2) / GRID_SIZE);
+                        const or2 = Math.round((t.y - (th * GRID_SIZE) / 2) / GRID_SIZE);
+                        if (c >= oc && c < oc + tw && r >= or2 && r < or2 + th) { occupied = true; break; }
+                    }
+                    if (!occupied) {
+                        ctx.strokeRect(c * GRID_SIZE, r * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+                    }
+                }
+            }
+        }
+    },
+
+    renderWalls() {
+        for (const wall of Game.walls) {
+            const wx = wall.x, wy = wall.y;
+            const hs = GRID_SIZE / 2; // half size = 10
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(wx-hs+1, wy-hs+3, GRID_SIZE, GRID_SIZE);
+            // Body with brick pattern
+            const brickH = Math.round(GRID_SIZE * 0.2);
+            ctx.fillStyle = '#777'; ctx.fillRect(wx-hs, wy-hs, GRID_SIZE, GRID_SIZE);
+            ctx.fillStyle = '#888'; ctx.fillRect(wx-hs+2, wy-hs+2, GRID_SIZE-4, brickH);
+            ctx.fillStyle = '#7a7a7a'; ctx.fillRect(wx-hs+2, wy-hs+brickH+4, hs-2, brickH);
+            ctx.fillStyle = '#888'; ctx.fillRect(wx+1, wy-hs+brickH+4, hs-2, brickH);
+            ctx.fillStyle = '#7a7a7a'; ctx.fillRect(wx-hs+2, wy+2, GRID_SIZE-4, brickH);
+            ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.strokeRect(wx-hs, wy-hs, GRID_SIZE, GRID_SIZE);
+            // Health bar
+            const hpPct = wall.hp / (200 + Game.wave * 10);
+            const barH = Math.max(3, Math.round(GRID_SIZE * 0.08));
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(wx-hs+2, wy+hs+2, GRID_SIZE-4, barH);
+            ctx.fillStyle = `hsl(${hpPct * 120}, 70%, 50%)`;
+            ctx.fillRect(wx-hs+2, wy+hs+2, (GRID_SIZE-4) * hpPct, barH);
+        }
+    },
+
+    renderTowers() {
+        for (const tower of Game.towers) {
+            const def = tower.def;
+            const isBuilding = def.special === 'building';
+            const tx = tower.x, ty = tower.y;
+
+            // Range indicator on hover
+            if (Game.hoveredTower === tower && tower.range > 0) {
+                ctx.beginPath();
+                ctx.arc(tx, ty, tower.range, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            const tgw = def.gridW || 1;
+            const tgh = def.gridH || 1;
+            const tHalfW = (tgw * GRID_SIZE) / 2;
+            const tHalfH = (tgh * GRID_SIZE) / 2;
+            const baseR = Math.min(tHalfW, tHalfH) - 2;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(tx+2, ty+3, isBuilding ? tHalfW-2 : baseR, isBuilding ? tHalfH*0.6 : baseR*0.7, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            if (isBuilding) {
+                // Building rendering
+                const rgb = hexToRgb(def.color);
+                // Base plate
+                ctx.fillStyle = `rgba(${rgb},0.15)`;
+                ctx.fillRect(tx-tHalfW+2, ty-tHalfH+2, tHalfW*2-4, tHalfH*2-4);
+                // Border
+                ctx.strokeStyle = def.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(tx-tHalfW+2, ty-tHalfH+2, tHalfW*2-4, tHalfH*2-4);
+                // Corner bolts
+                const boltOff = Math.min(tHalfW, tHalfH) - 5;
+                for (const [cx,cy] of [[-boltOff,-boltOff],[boltOff,-boltOff],[-boltOff,boltOff],[boltOff,boltOff]]) {
+                    ctx.fillStyle = '#555';
+                    ctx.beginPath(); ctx.arc(tx+cx, ty+cy, 2.5, 0, Math.PI*2); ctx.fill();
+                }
+
+                const bldgR = Math.min(tHalfW, tHalfH) * 0.65;
+                if (def.building === 'nuke') {
+                    // ICBM silo
+                    const g = ctx.createRadialGradient(tx, ty-2, 0, tx, ty, bldgR);
+                    g.addColorStop(0, '#ff6'); g.addColorStop(0.5, '#f84'); g.addColorStop(1, 'rgba(255,136,68,0.2)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#f84'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.stroke();
+                    // Nuclear symbol
+                    ctx.fillStyle = '#000'; ctx.font = `bold ${Math.round(bldgR*1.2)}px sans-serif`;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('\u2622', tx, ty);
+                } else if (def.building === 'wall') {
+                    // Factory structure
+                    const bs = bldgR;
+                    ctx.fillStyle = '#666'; ctx.fillRect(tx-bs, ty-bs, bs*2, bs*2);
+                    ctx.fillStyle = '#888'; ctx.fillRect(tx-bs+2, ty-bs+2, bs-2, bs-2);
+                    ctx.fillStyle = '#777'; ctx.fillRect(tx+2, ty-bs+2, bs-2, bs-2);
+                    ctx.fillStyle = '#888'; ctx.fillRect(tx-bs+2, ty+2, bs*2-4, bs-2);
+                    ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.strokeRect(tx-bs, ty-bs, bs*2, bs*2);
+                } else if (def.building === 'recycler') {
+                    ctx.fillStyle = '#3a3'; ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#5c5'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.stroke();
+                    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(bldgR*1.2)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('\u267B', tx, ty);
+                } else if (def.building === 'radar') {
+                    // Dome
+                    const g = ctx.createRadialGradient(tx-3, ty-3, 0, tx, ty, bldgR);
+                    g.addColorStop(0, '#8af'); g.addColorStop(1, '#346');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#58f'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(tx, ty, bldgR, 0, Math.PI*2); ctx.stroke();
+                    // Dish (rotates slowly)
+                    const ra = (Date.now() / 2000) % (Math.PI * 2);
+                    ctx.strokeStyle = '#adf'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(tx, ty);
+                    ctx.lineTo(tx + Math.cos(ra)*(bldgR-2), ty + Math.sin(ra)*(bldgR-2)); ctx.stroke();
+                    // Range ring
+                    ctx.beginPath(); ctx.arc(tx, ty, tower.range, 0, Math.PI*2);
+                    ctx.strokeStyle = 'rgba(88,136,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+                } else if (def.building === 'lab') {
+                    const bs = bldgR;
+                    ctx.fillStyle = '#7ac'; ctx.fillRect(tx-bs, ty-bs, bs*2, bs*2);
+                    ctx.fillStyle = '#9ce'; ctx.fillRect(tx-bs+3, ty-bs+3, bs*1.4, bs*0.6);
+                    ctx.strokeStyle = '#aef'; ctx.lineWidth = 1; ctx.strokeRect(tx-bs, ty-bs, bs*2, bs*2);
+                    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(bldgR)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('\u2697', tx, ty+2);
+                }
+
+            } else {
+                // Combat tower rendering
+                // Octagonal concrete platform
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const pa = Math.PI/8 + Math.PI/4*i;
+                    const px = tx + Math.cos(pa)*baseR, py = ty + Math.sin(pa)*baseR;
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                const bg = ctx.createRadialGradient(tx-2, ty-2, 0, tx, ty, baseR+1);
+                bg.addColorStop(0, '#585858'); bg.addColorStop(0.6, '#3e3e3e'); bg.addColorStop(1, '#282828');
+                ctx.fillStyle = bg; ctx.fill();
+                ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.5; ctx.stroke();
+                // Platform detail ring
+                ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(tx, ty, baseR*0.8, 0, Math.PI*2); ctx.stroke();
+                // Corner rivets
+                for (let i = 0; i < 4; i++) {
+                    const ra = Math.PI/2*i + Math.PI/4;
+                    ctx.fillStyle = '#666'; ctx.beginPath();
+                    ctx.arc(tx + Math.cos(ra)*baseR*0.83, ty + Math.sin(ra)*baseR*0.83, 1, 0, Math.PI*2); ctx.fill();
+                }
+                // Color accent ring
+                ctx.strokeStyle = def.color; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(tx, ty, baseR*0.6, 0, Math.PI*2); ctx.stroke();
+
+                const a = tower.angle;
+                const ca = Math.cos(a), sa = Math.sin(a);
+                const sc = baseR / 15; // scale relative to original 15px base
+
+                if (def.id === 'missile') {
+                    // Missile launcher box with tube openings
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    ctx.fillStyle = '#3a7a5a';
+                    ctx.fillRect(-4*sc, -5*sc, 14*sc, 10*sc);
+                    ctx.strokeStyle = '#2a5a3a'; ctx.lineWidth = 1;
+                    ctx.strokeRect(-4*sc, -5*sc, 14*sc, 10*sc);
+                    // Missile tube openings (2x2 grid)
+                    ctx.fillStyle = '#1a3a2a';
+                    ctx.fillRect(2*sc, -4*sc, 6*sc, 3*sc); ctx.fillRect(2*sc, 1*sc, 6*sc, 3*sc);
+                    // Missile tips visible in tubes
+                    ctx.fillStyle = '#ddd';
+                    ctx.fillRect(7*sc, -3.5*sc, 2*sc, 2*sc); ctx.fillRect(7*sc, 1.5*sc, 2*sc, 2*sc);
+                    // Targeting sensor
+                    ctx.fillStyle = '#f44'; ctx.beginPath(); ctx.arc(-1*sc, -6*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                } else if (def.id === 'howitzer') {
+                    // Artillery cannon with armored turret
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Armored turret housing
+                    ctx.fillStyle = '#8a5030';
+                    ctx.beginPath(); ctx.arc(-1*sc, 0, 7*sc, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#6a3a20'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(-1*sc, 0, 7*sc, 0, Math.PI*2); ctx.stroke();
+                    // Heavy barrel
+                    ctx.fillStyle = '#7a4a2a'; ctx.fillRect(4*sc, -3*sc, 12*sc, 6*sc);
+                    // Barrel bore
+                    ctx.fillStyle = '#3a2010'; ctx.fillRect(14*sc, -1.5*sc, 3*sc, 3*sc);
+                    // Muzzle brake
+                    ctx.fillStyle = '#5a3a1a'; ctx.fillRect(15*sc, -4*sc, 2*sc, 8*sc);
+                    // Turret hatch
+                    ctx.fillStyle = '#6a3a20'; ctx.beginPath(); ctx.arc(-2*sc, 0, 3*sc, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 0.5;
+                    ctx.beginPath(); ctx.arc(-2*sc, 0, 3*sc, 0, Math.PI*2); ctx.stroke();
+                    ctx.restore();
+
+                } else if (def.id === 'tesla') {
+                    // Tesla coil with lightning arcs
+                    const tg = ctx.createRadialGradient(tx, ty, 0, tx, ty, 7);
+                    tg.addColorStop(0, '#aaccff'); tg.addColorStop(0.5, '#5599ff'); tg.addColorStop(1, '#223388');
+                    ctx.fillStyle = tg; ctx.beginPath(); ctx.arc(tx, ty, 7, 0, Math.PI*2); ctx.fill();
+                    // Coil windings
+                    ctx.strokeStyle = 'rgba(136,187,255,0.5)'; ctx.lineWidth = 0.8;
+                    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(tx, ty, 3+i*1.8, 0, Math.PI*2); ctx.stroke(); }
+                    // Top capacitor sphere
+                    const cg = ctx.createRadialGradient(tx-1, ty-1, 0, tx, ty, 4);
+                    cg.addColorStop(0, '#fff'); cg.addColorStop(0.5, '#aaddff'); cg.addColorStop(1, '#4488cc');
+                    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
+                    // Animated lightning arcs to 4 points
+                    const lt = Date.now() / 80;
+                    ctx.strokeStyle = 'rgba(120,180,255,0.7)'; ctx.lineWidth = 1.5;
+                    for (let i = 0; i < 4; i++) {
+                        const la = a + i*Math.PI/2;
+                        const lca = Math.cos(la), lsa = Math.sin(la);
+                        ctx.beginPath();
+                        ctx.moveTo(tx + lca*5, ty + lsa*5);
+                        ctx.lineTo(tx + lca*9 + Math.sin(lt+i*2)*2, ty + lsa*9 + Math.cos(lt+i*2)*2);
+                        ctx.lineTo(tx + lca*13, ty + lsa*13);
+                        ctx.stroke();
+                        ctx.fillStyle = '#ddeeff'; ctx.beginPath();
+                        ctx.arc(tx + lca*13, ty + lsa*13, 1.5, 0, Math.PI*2); ctx.fill();
+                    }
+
+                } else if (def.id === 'gatling') {
+                    // Rotating minigun with barrel assembly
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Barrel shroud
+                    ctx.fillStyle = '#553333'; ctx.fillRect(-2, -4, 17, 8);
+                    ctx.strokeStyle = '#331a1a'; ctx.lineWidth = 0.5; ctx.strokeRect(-2, -4, 17, 8);
+                    // Rotating barrel bundle
+                    const spin = (Date.now()/40) % (Math.PI*2);
+                    for (let i = 0; i < 6; i++) {
+                        const ba = spin + i*Math.PI/3;
+                        const bx = Math.cos(ba)*2.5, by = Math.sin(ba)*2.5;
+                        ctx.strokeStyle = i%2===0 ? '#cc5555' : '#994444'; ctx.lineWidth = 1.5;
+                        ctx.beginPath(); ctx.moveTo(5+bx, by); ctx.lineTo(16+bx*0.3, by*0.3); ctx.stroke();
+                    }
+                    // Barrel hub
+                    ctx.fillStyle = '#442222'; ctx.beginPath(); ctx.arc(4, 0, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#663333'; ctx.beginPath(); ctx.arc(4, 0, 2, 0, Math.PI*2); ctx.fill();
+                    // Muzzle ring
+                    ctx.strokeStyle = '#884444'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(16, 0, 3, 0, Math.PI*2); ctx.stroke();
+                    // Ammo feed box
+                    ctx.fillStyle = '#664422'; ctx.fillRect(-3, 4, 7, 4);
+                    ctx.fillStyle = '#ccaa44';
+                    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-1+i*2.5, 6, 1, 0, Math.PI*2); ctx.fill(); }
+                    ctx.restore();
+
+                } else if (def.id === 'nullifier') {
+                    // Parabolic dish emitter
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Support arm
+                    ctx.strokeStyle = '#7744aa'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(9, 0); ctx.stroke();
+                    // Parabolic dish
+                    ctx.fillStyle = '#9966cc';
+                    ctx.beginPath(); ctx.arc(12, 0, 7, -1.2, 1.2); ctx.lineTo(8, 0); ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#bb88ee'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(12, 0, 7, -1.2, 1.2); ctx.stroke();
+                    // Feed horn
+                    ctx.fillStyle = '#ddaaff'; ctx.beginPath(); ctx.arc(10, 0, 2, 0, Math.PI*2); ctx.fill();
+                    // Energy glow
+                    ctx.fillStyle = 'rgba(180,120,255,0.3)'; ctx.beginPath(); ctx.arc(13, 0, 4, 0, Math.PI*2); ctx.fill();
+                    // Central hub
+                    ctx.fillStyle = '#553388'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#7744aa'; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                } else if (def.id === 'aa') {
+                    // Anti-aircraft dual gun mount
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Gun mount base
+                    ctx.fillStyle = '#557799'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+                    // Dual barrels
+                    for (const off of [-3, 3]) {
+                        ctx.fillStyle = '#7799bb'; ctx.fillRect(3, off-1.5, 13, 3);
+                        ctx.fillStyle = '#99bbdd'; ctx.fillRect(14, off-2, 2, 4);
+                    }
+                    // Barrel connector plate
+                    ctx.fillStyle = '#446688'; ctx.fillRect(2, -4.5, 3, 9);
+                    // Targeting optic
+                    ctx.fillStyle = '#aaddff'; ctx.beginPath(); ctx.arc(1, -6, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                } else if (def.id === 'goo') {
+                    // Pressurized chemical tank with spray nozzle
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Pressure tank
+                    ctx.fillStyle = '#336633';
+                    ctx.beginPath(); ctx.ellipse(-2, 0, 5, 6, 0, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#224422'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.ellipse(-2, 0, 5, 6, 0, 0, Math.PI*2); ctx.stroke();
+                    // Tank straps
+                    ctx.strokeStyle = '#448844'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(-5, -2); ctx.lineTo(1, -2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(1, 2); ctx.stroke();
+                    // Nozzle pipe
+                    ctx.strokeStyle = '#558855'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(3, 0); ctx.lineTo(11, 0); ctx.stroke();
+                    // Spray head
+                    ctx.fillStyle = '#88ee88';
+                    ctx.beginPath(); ctx.arc(12, 0, 3, -0.7, 0.7); ctx.lineTo(10, 0); ctx.closePath(); ctx.fill();
+                    // Drip
+                    ctx.fillStyle = '#66cc66'; ctx.beginPath(); ctx.arc(13, 2, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                } else if (def.id === 'chain') {
+                    // Heavy machine gun with ammo belt
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Gun body / receiver
+                    ctx.fillStyle = '#998833'; ctx.fillRect(-3, -3, 17, 6);
+                    ctx.strokeStyle = '#776622'; ctx.lineWidth = 0.5; ctx.strokeRect(-3, -3, 17, 6);
+                    // Barrel with cooling jacket
+                    ctx.fillStyle = '#bbaa44'; ctx.fillRect(8, -2, 10, 4);
+                    // Cooling fins
+                    ctx.strokeStyle = '#887722'; ctx.lineWidth = 0.5;
+                    for (let i = 0; i < 4; i++) { const fx = 10+i*2; ctx.beginPath(); ctx.moveTo(fx, -2.5); ctx.lineTo(fx, 2.5); ctx.stroke(); }
+                    // Muzzle
+                    ctx.fillStyle = '#443300'; ctx.fillRect(17, -1.5, 2, 3);
+                    // Ammo box
+                    ctx.fillStyle = '#776622'; ctx.fillRect(-2, 3, 7, 5);
+                    ctx.strokeStyle = '#554400'; ctx.lineWidth = 0.5; ctx.strokeRect(-2, 3, 7, 5);
+                    // Ammo belt
+                    ctx.fillStyle = '#ccaa44';
+                    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(i*2.5, 4, 1, 0, Math.PI*2); ctx.fill(); }
+                    ctx.restore();
+
+                } else if (def.id === 'gauss') {
+                    // Electromagnetic accelerator rails
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Housing
+                    ctx.fillStyle = '#884466'; ctx.fillRect(-2, -2, 8, 4);
+                    // Dual magnetic rails
+                    ctx.fillStyle = '#cc6688';
+                    ctx.fillRect(4, -4.5, 14, 2); ctx.fillRect(4, 2.5, 14, 2);
+                    ctx.strokeStyle = '#aa4466'; ctx.lineWidth = 0.5;
+                    ctx.strokeRect(4, -4.5, 14, 2); ctx.strokeRect(4, 2.5, 14, 2);
+                    // Capacitor rings
+                    ctx.strokeStyle = '#ffaacc'; ctx.lineWidth = 1;
+                    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(7+i*3.5, -4.5); ctx.lineTo(7+i*3.5, 4.5); ctx.stroke(); }
+                    // Energy channel between rails
+                    const eg = ctx.createLinearGradient(6, 0, 18, 0);
+                    eg.addColorStop(0, 'rgba(255,150,200,0.1)'); eg.addColorStop(1, 'rgba(255,200,230,0.5)');
+                    ctx.fillStyle = eg; ctx.fillRect(6, -2.5, 12, 5);
+                    // Muzzle glow
+                    ctx.fillStyle = '#ffccee'; ctx.beginPath(); ctx.arc(18, 0, 2.5, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,200,230,0.3)'; ctx.beginPath(); ctx.arc(18, 0, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+
+                } else if (def.id === 'oil') {
+                    // Oil drum with spray nozzle
+                    ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+                    // Oil drum
+                    ctx.fillStyle = '#554433';
+                    ctx.beginPath(); ctx.ellipse(-1, 0, 5, 6, 0, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#332211'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.ellipse(-1, 0, 5, 6, 0, 0, Math.PI*2); ctx.stroke();
+                    // Drum bands
+                    ctx.strokeStyle = '#776655'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(-4, -3); ctx.lineTo(2, -3); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-4, 3); ctx.lineTo(2, 3); ctx.stroke();
+                    // Spray pipe
+                    ctx.strokeStyle = '#665544'; ctx.lineWidth = 2.5;
+                    ctx.beginPath(); ctx.moveTo(3, 0); ctx.lineTo(10, 0); ctx.stroke();
+                    // Fan-shaped spray head
+                    ctx.fillStyle = '#887766';
+                    ctx.beginPath(); ctx.arc(11, 0, 5, -0.7, 0.7); ctx.lineTo(9, 0); ctx.closePath(); ctx.fill();
+                    // Oil drops
+                    ctx.fillStyle = '#443322';
+                    ctx.beginPath(); ctx.arc(13, -2, 1, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(14, 1, 1.2, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+                }
+            }
+        }
+    },
+
+    renderEnemies() {
+        for (const e of Game.enemies) {
+            if (!e.alive) continue;
+
+            ctx.save();
+            ctx.translate(e.x, e.y);
+
+            // Shadow for flying
+            if (e.flying) {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(3, 5, e.size * 0.8, e.size * 0.4, 0, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // Body
+            const yOff = e.flying ? -6 : 0;
+            let baseColor = e.color;
+            if (e.frozen > 0) baseColor = '#aef';
+            if (e.nullified > 0) baseColor = '#faf';
+            const rgb = hexToRgb(baseColor);
+
+            if (e.type === 'drone') {
+                // Quadcopter drone (flying)
+                const s = e.size;
+                // Arms
+                ctx.strokeStyle = `rgba(${rgb},0.8)`; ctx.lineWidth = 1.5;
+                for (let i = 0; i < 4; i++) {
+                    const da = Math.PI/4 + i*Math.PI/2;
+                    ctx.beginPath(); ctx.moveTo(0, yOff);
+                    ctx.lineTo(Math.cos(da)*s*0.9, yOff + Math.sin(da)*s*0.9);
+                    ctx.stroke();
+                }
+                // Rotor discs
+                const rt = (Date.now()/30) % (Math.PI*2);
+                for (let i = 0; i < 4; i++) {
+                    const da = Math.PI/4 + i*Math.PI/2;
+                    const rx = Math.cos(da)*s*0.9, ry = yOff + Math.sin(da)*s*0.9;
+                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                    ctx.beginPath(); ctx.arc(rx, ry, s*0.35, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(rx, ry, s*0.35, 0, Math.PI*2); ctx.stroke();
+                }
+                // Central body
+                ctx.fillStyle = baseColor;
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.35, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.35, 0, Math.PI*2); ctx.stroke();
+                // Camera sensor
+                ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(0, yOff, s*0.15, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#f44'; ctx.beginPath(); ctx.arc(0, yOff, 1, 0, Math.PI*2); ctx.fill();
+
+            } else if (e.type === 'airship') {
+                // Military helicopter/gunship (flying)
+                const s = e.size;
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Fuselage
+                ctx.fillStyle = baseColor;
+                ctx.beginPath(); ctx.ellipse(0, yOff, s*1.1, s*0.5, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.ellipse(0, yOff, s*1.1, s*0.5, 0, 0, Math.PI*2); ctx.stroke();
+                // Cockpit windshield
+                ctx.fillStyle = 'rgba(200,220,255,0.5)';
+                ctx.beginPath(); ctx.ellipse(s*0.5, yOff, s*0.3, s*0.25, 0, 0, Math.PI*2); ctx.fill();
+                // Tail boom
+                ctx.fillStyle = `rgba(${rgb},0.7)`;
+                ctx.fillRect(-s*1.2, yOff-s*0.15, s*0.4, s*0.3);
+                // Tail rotor
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(-s*1.2, yOff, s*0.25, 0, Math.PI*2); ctx.stroke();
+                // Main rotor disc
+                ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                ctx.beginPath(); ctx.arc(0, yOff, s*1.0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, yOff, s*1.0, 0, Math.PI*2); ctx.stroke();
+                // Animated rotor blades
+                const rr = (Date.now()/25) % (Math.PI*2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
+                for (let i = 0; i < 2; i++) {
+                    const ba = rr + i*Math.PI;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(ba)*-s*0.9, yOff+Math.sin(ba)*-s*0.9);
+                    ctx.lineTo(Math.cos(ba)*s*0.9, yOff+Math.sin(ba)*s*0.9);
+                    ctx.stroke();
+                }
+                // Weapon pods
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(s*0.2, yOff+s*0.35, s*0.4, s*0.15);
+                ctx.fillRect(s*0.2, yOff-s*0.5, s*0.4, s*0.15);
+                ctx.restore();
+
+            } else if (e.type === 'mothership') {
+                // Large carrier command vessel (flying)
+                const s = e.size;
+                // Main hull - large disc
+                ctx.fillStyle = baseColor;
+                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.fill();
+                // Hull ring detail
+                ctx.strokeStyle = `rgba(${rgb},0.5)`; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.85, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.6, 0, Math.PI*2); ctx.stroke();
+                // Armor plate segments
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
+                for (let i = 0; i < 6; i++) {
+                    const sa2 = i*Math.PI/3;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(sa2)*s*0.4, yOff+Math.sin(sa2)*s*0.4);
+                    ctx.lineTo(Math.cos(sa2)*s, yOff+Math.sin(sa2)*s);
+                    ctx.stroke();
+                }
+                // Animated running lights around edge
+                const mlt = Date.now()/200;
+                for (let i = 0; i < 8; i++) {
+                    const la = i*Math.PI/4 + mlt;
+                    const bright = (Math.sin(la*2+mlt) + 1) * 0.5;
+                    ctx.fillStyle = `rgba(255,200,255,${0.3+bright*0.5})`;
+                    ctx.beginPath(); ctx.arc(Math.cos(la)*s*0.85, yOff+Math.sin(la)*s*0.85, 1.5, 0, Math.PI*2); ctx.fill();
+                }
+                // Central command dome
+                const dg = ctx.createRadialGradient(0, yOff-1, 0, 0, yOff, s*0.35);
+                dg.addColorStop(0, '#fff'); dg.addColorStop(0.3, `rgba(${rgb},0.8)`); dg.addColorStop(1, `rgba(${rgb},0.3)`);
+                ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, yOff, s*0.35, 0, Math.PI*2); ctx.fill();
+                // Engine glow
+                ctx.fillStyle = 'rgba(200,150,255,0.3)';
+                ctx.beginPath(); ctx.arc(0, yOff + s*0.4, s*0.2, 0, Math.PI*2); ctx.fill();
+                // Outer hull ring
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.stroke();
+
+            } else if (e.type === 'tank' || e.type === 'fortress') {
+                // Tank / heavy assault vehicle (top-down)
+                const s = e.size;
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Track assemblies
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-s*0.9, -s-1, s*1.8, 3);
+                ctx.fillRect(-s*0.9, s-2, s*1.8, 3);
+                // Track link detail
+                ctx.strokeStyle = '#444'; ctx.lineWidth = 0.5;
+                for (let i = 0; i < Math.floor(s*0.6); i++) {
+                    const lx = -s*0.8 + i*3;
+                    ctx.beginPath(); ctx.moveTo(lx, -s-1); ctx.lineTo(lx, -s+2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(lx, s-2); ctx.lineTo(lx, s+1); ctx.stroke();
+                }
+                // Hull body
+                ctx.fillStyle = baseColor;
+                const hullW = e.type === 'fortress' ? s*1.9 : s*1.7;
+                const hullH = e.type === 'fortress' ? s*1.6 : s*1.5;
+                ctx.fillRect(-hullW/2, -hullH/2, hullW, hullH);
+                // Hull outline
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.5;
+                ctx.strokeRect(-hullW/2, -hullH/2, hullW, hullH);
+                // Front armor slope highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.moveTo(hullW/2, -hullH/2); ctx.lineTo(hullW/2-s*0.3, -hullH/2+s*0.3);
+                ctx.lineTo(hullW/2-s*0.3, hullH/2-s*0.3); ctx.lineTo(hullW/2, hullH/2);
+                ctx.closePath(); ctx.fill();
+                // Engine deck (rear)
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.fillRect(-hullW/2, -hullH/2, s*0.5, hullH);
+                // Engine grille lines
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.5;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath(); ctx.moveTo(-hullW/2+2, -hullH/2+3+i*s*0.3);
+                    ctx.lineTo(-hullW/2+s*0.4, -hullH/2+3+i*s*0.3); ctx.stroke();
+                }
+                // Turret dome
+                const tr = e.type === 'fortress' ? s*0.45 : s*0.4;
+                ctx.fillStyle = `rgba(${rgb},0.85)`;
+                ctx.beginPath(); ctx.arc(s*0.1, 0, tr, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.arc(s*0.1, 0, tr, 0, Math.PI*2); ctx.stroke();
+                // Main gun barrel
+                const barrelLen = e.type === 'fortress' ? s*1.2 : s;
+                const barrelW = e.type === 'fortress' ? 3.5 : 2.5;
+                ctx.fillStyle = '#555';
+                ctx.fillRect(s*0.1+tr*0.5, -barrelW/2, barrelLen, barrelW);
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 0.5;
+                ctx.strokeRect(s*0.1+tr*0.5, -barrelW/2, barrelLen, barrelW);
+                // Commander hatch
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
+                ctx.arc(s*0.1-tr*0.2, 0, tr*0.3, 0, Math.PI*2); ctx.fill();
+                if (e.type === 'fortress') {
+                    // Secondary turret
+                    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                    ctx.beginPath(); ctx.arc(-s*0.3, 0, s*0.2, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#444'; ctx.fillRect(-s*0.3, -1, s*0.5, 2);
+                    // Extra armor plates
+                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                    ctx.fillRect(-hullW/2+1, -hullH/2+1, s*0.3, s*0.3);
+                    ctx.fillRect(-hullW/2+1, hullH/2-s*0.3-1, s*0.3, s*0.3);
+                }
+                ctx.restore();
+
+            } else if (e.type === 'speeder') {
+                // Sleek attack craft with engines
+                const s = e.size;
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Engine exhaust glow
+                ctx.fillStyle = 'rgba(255,200,100,0.3)';
+                ctx.beginPath(); ctx.ellipse(-s*1.2, 0, s*0.4, s*0.2, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,200,0.5)';
+                ctx.beginPath(); ctx.ellipse(-s*0.9, 0, s*0.15, s*0.1, 0, 0, Math.PI*2); ctx.fill();
+                // Aerodynamic body
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                ctx.moveTo(s*1.1, 0); ctx.lineTo(s*0.2, -s*0.6);
+                ctx.lineTo(-s*0.8, -s*0.5); ctx.lineTo(-s*0.7, 0);
+                ctx.lineTo(-s*0.8, s*0.5); ctx.lineTo(s*0.2, s*0.6);
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+                // Cockpit canopy
+                ctx.fillStyle = 'rgba(200,230,255,0.5)';
+                ctx.beginPath();
+                ctx.moveTo(s*0.7, 0); ctx.lineTo(s*0.2, -s*0.25);
+                ctx.lineTo(0, -s*0.2); ctx.lineTo(0, s*0.2);
+                ctx.lineTo(s*0.2, s*0.25); ctx.closePath(); ctx.fill();
+                // Engine nacelles
+                ctx.fillStyle = `rgba(${rgb},0.6)`;
+                ctx.fillRect(-s*0.7, -s*0.55, s*0.4, s*0.2);
+                ctx.fillRect(-s*0.7, s*0.35, s*0.4, s*0.2);
+                // Tail fins
+                ctx.strokeStyle = baseColor; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(-s*0.6, -s*0.5); ctx.lineTo(-s*0.8, -s*0.8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-s*0.6, s*0.5); ctx.lineTo(-s*0.8, s*0.8); ctx.stroke();
+                ctx.restore();
+
+            } else if (e.type === 'healer') {
+                // Medical support vehicle
+                const s = e.size;
+                // Rounded body
+                ctx.fillStyle = baseColor;
+                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.fill();
+                // White inner ring
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.75, 0, Math.PI*2); ctx.fill();
+                // Red medical cross
+                ctx.fillStyle = '#ff3333';
+                const cw = s*0.25, ch = s*0.7;
+                ctx.fillRect(-cw, yOff-ch/2, cw*2, ch);
+                ctx.fillRect(-ch/2, yOff-cw, ch, cw*2);
+                ctx.strokeStyle = '#cc0000'; ctx.lineWidth = 0.5;
+                ctx.strokeRect(-cw, yOff-ch/2, cw*2, ch);
+                ctx.strokeRect(-ch/2, yOff-cw, ch, cw*2);
+                // Outer ring
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.stroke();
+                // Animated healing pulse aura
+                const hp2 = (Date.now()/600) % 1;
+                ctx.strokeStyle = `rgba(100,255,100,${0.4*(1-hp2)})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, yOff, s*(1+hp2*0.5), 0, Math.PI*2); ctx.stroke();
+
+            } else if (e.type === 'shielded') {
+                // Hexagonal armored transport
+                const s = e.size;
+                // Hex hull
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                for (let h = 0; h < 6; h++) {
+                    const ha = Math.PI/3*h - Math.PI/6;
+                    const hx = Math.cos(ha)*s, hy = Math.sin(ha)*s + yOff;
+                    h === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
+                }
+                ctx.closePath(); ctx.fill();
+                // Armor panel seams
+                ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.8;
+                for (let h = 0; h < 6; h++) {
+                    const ha = Math.PI/3*h - Math.PI/6;
+                    ctx.beginPath(); ctx.moveTo(0, yOff);
+                    ctx.lineTo(Math.cos(ha)*s, Math.sin(ha)*s+yOff);
+                    ctx.stroke();
+                }
+                // Inner reinforced core
+                ctx.fillStyle = `rgba(${rgb},0.5)`;
+                ctx.beginPath();
+                for (let h = 0; h < 6; h++) {
+                    const ha = Math.PI/3*h - Math.PI/6;
+                    const hx = Math.cos(ha)*s*0.5, hy = Math.sin(ha)*s*0.5 + yOff;
+                    h === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
+                }
+                ctx.closePath(); ctx.fill();
+                // Shield generator core
+                ctx.fillStyle = 'rgba(100,200,255,0.4)';
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.25, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(0, yOff, s*0.1, 0, Math.PI*2); ctx.fill();
+                // Hull outline
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                for (let h = 0; h < 6; h++) {
+                    const ha = Math.PI/3*h - Math.PI/6;
+                    h === 0 ? ctx.moveTo(Math.cos(ha)*s, Math.sin(ha)*s+yOff)
+                            : ctx.lineTo(Math.cos(ha)*s, Math.sin(ha)*s+yOff);
+                }
+                ctx.closePath(); ctx.stroke();
+                // Rivet details
+                for (let h = 0; h < 6; h++) {
+                    const ha = Math.PI/3*h + Math.PI/6 - Math.PI/6;
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath();
+                    ctx.arc(Math.cos(ha)*s*0.7, Math.sin(ha)*s*0.7+yOff, 1, 0, Math.PI*2); ctx.fill();
+                }
+
+            } else if (e.type === 'jammer') {
+                // Electronic warfare vehicle with antenna
+                const s = e.size;
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Boxy vehicle hull
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(-s*0.8, -s*0.6, s*1.6, s*1.2);
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+                ctx.strokeRect(-s*0.8, -s*0.6, s*1.6, s*1.2);
+                // Warning stripe pattern
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(-s*0.7+i*s*0.4, -s*0.6, s*0.15, s*1.2);
+                }
+                // Equipment panel
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(-s*0.5, -s*0.4, s, s*0.8);
+                // Antenna mast
+                ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s*0.9); ctx.stroke();
+                // Rotating radar dish
+                const ja = (Date.now()/500) % (Math.PI*2);
+                ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(ja)*s*0.5, -s*0.9+Math.sin(ja)*s*0.2);
+                ctx.lineTo(0, -s*0.9);
+                ctx.lineTo(Math.cos(ja+Math.PI)*s*0.5, -s*0.9+Math.sin(ja+Math.PI)*s*0.2);
+                ctx.stroke();
+                // ECM antenna tips
+                ctx.fillStyle = '#ff5555';
+                ctx.beginPath(); ctx.arc(Math.cos(ja)*s*0.5, -s*0.9+Math.sin(ja)*s*0.2, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(Math.cos(ja+Math.PI)*s*0.5, -s*0.9+Math.sin(ja+Math.PI)*s*0.2, 1.5, 0, Math.PI*2); ctx.fill();
+                // Blinking warning light
+                const blink = Math.sin(Date.now()/150) > 0;
+                if (blink) {
+                    ctx.fillStyle = 'rgba(255,80,80,0.6)';
+                    ctx.beginPath(); ctx.arc(0, -s*0.9, 3, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.fillStyle = '#f55'; ctx.beginPath(); ctx.arc(0, -s*0.9, 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+
+            } else {
+                // Soldier - infantry top-down view
+                const s = e.size;
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Legs/boots
+                ctx.fillStyle = `rgba(${rgb},0.5)`;
+                ctx.fillRect(-s*0.2, s*0.3, s*0.15, s*0.4);
+                ctx.fillRect(s*0.05, s*0.3, s*0.15, s*0.4);
+                // Torso
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(-s*0.35, -s*0.3, s*0.7, s*0.7);
+                // Shoulders/arms
+                ctx.fillStyle = `rgba(${rgb},0.8)`;
+                ctx.fillRect(-s*0.5, -s*0.15, s*0.2, s*0.4);
+                ctx.fillRect(s*0.3, -s*0.15, s*0.2, s*0.4);
+                // Backpack
+                ctx.fillStyle = `rgba(${rgb},0.5)`;
+                ctx.fillRect(-s*0.25, -s*0.6, s*0.5, s*0.35);
+                // Helmet (round, viewed from above)
+                const hg = ctx.createRadialGradient(-s*0.05, -s*0.15, 0, 0, 0, s*0.4);
+                hg.addColorStop(0, `rgba(${rgb},1)`); hg.addColorStop(1, `rgba(${rgb},0.6)`);
+                ctx.fillStyle = hg;
+                ctx.beginPath(); ctx.arc(0, 0, s*0.4, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.arc(0, 0, s*0.4, 0, Math.PI*2); ctx.stroke();
+                // Helmet shine
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath(); ctx.arc(-s*0.1, -s*0.1, s*0.15, 0, Math.PI*2); ctx.fill();
+                // Rifle
+                ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(s*0.4, -s*0.1); ctx.lineTo(s*0.9, -s*0.1); ctx.stroke();
+                ctx.restore();
+            }
+
+            // Shield indicator
+            if (e.shield > 0 && e.nullified <= 0) {
+                ctx.beginPath();
+                ctx.arc(0, yOff, e.size + 3, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(100,200,255,0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Autorepair indicator
+            if (e.autorepair > 0 && e.nullified <= 0) {
+                ctx.fillStyle = '#5f5';
+                ctx.font = '8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('+', 0, yOff - e.size - 4);
+            }
+
+            // Jammer indicator
+            if (e.jammer) {
+                ctx.beginPath();
+                ctx.arc(0, yOff, e.jamRange || 80, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(255,100,100,0.15)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4,4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Health bar
+            const hpPct = e.hp / e.maxHp;
+            if (hpPct < 1) {
+                const bw = e.size * 2;
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(-bw/2, yOff - e.size - 6, bw, 3);
+                ctx.fillStyle = hpPct > 0.5 ? '#5f5' : hpPct > 0.25 ? '#ff5' : '#f55';
+                ctx.fillRect(-bw/2, yOff - e.size - 6, bw * hpPct, 3);
+            }
+
+            // Frozen timer
+            if (e.frozen > 0) {
+                ctx.fillStyle = 'rgba(170,220,255,0.3)';
+                ctx.beginPath();
+                ctx.arc(0, yOff, e.size + 5, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+    },
+
+    renderProjectiles() {
+        for (const p of Game.projectiles) {
+            const sz = p.size || 5;
+            const rgb = hexToRgb(p.color || '#fff');
+
+            // Glow
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, sz + 4, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(${rgb}, 0.25)`;
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = p.color || '#fff';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, sz, 0, Math.PI*2);
+            ctx.fill();
+
+            // Bright center
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, sz * 0.4, 0, Math.PI*2);
+            ctx.fill();
+
+            // Trail
+            for (let t = 1; t <= 3; t++) {
+                ctx.fillStyle = `rgba(${rgb}, ${0.3 - t * 0.08})`;
+                ctx.beginPath();
+                ctx.arc(p.x - p.vx * t, p.y - p.vy * t, sz * (1 - t * 0.2), 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+    },
+
+    renderEffects() {
+        for (const fx of Game.effects) {
+            if (fx.type === 'text') {
+                ctx.globalAlpha = fx.life / 60;
+                ctx.fillStyle = fx.color;
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(fx.text, fx.x, fx.y - (60 - fx.life) * 0.5);
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'ring') {
+                const pct = 1 - fx.life / 20;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.maxRadius * pct, 0, Math.PI*2);
+                ctx.strokeStyle = fx.color;
+                ctx.globalAlpha = fx.life / 20;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'nuke_flash') {
+                // Brief white flash over the whole screen
+                const intensity = fx.life / 12;
+                ctx.fillStyle = `rgba(255,255,255,${intensity * 0.7})`;
+                ctx.fillRect(0, 0, CW, CH);
+            }
+            if (fx.type === 'explosion') {
+                const pct = 1 - fx.life / 40;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.maxRadius * pct, 0, Math.PI*2);
+                ctx.fillStyle = fx.color;
+                ctx.globalAlpha = fx.life / 40 * 0.6;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'freeze_ring') {
+                const pct = 1 - fx.life / 30;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.maxRadius * pct, 0, Math.PI*2);
+                ctx.strokeStyle = '#aef';
+                ctx.globalAlpha = fx.life / 30;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(170,220,255,0.1)';
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'tesla') {
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI*2);
+                ctx.strokeStyle = '#59f';
+                ctx.globalAlpha = fx.life / 8 * 0.5;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Lightning bolts
+                for (let i = 0; i < 4; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const r = fx.radius * Math.random();
+                    ctx.beginPath();
+                    ctx.moveTo(fx.x, fx.y);
+                    const mx = fx.x + Math.cos(a) * r * 0.5 + rand(-10,10);
+                    const my = fx.y + Math.sin(a) * r * 0.5 + rand(-10,10);
+                    ctx.lineTo(mx, my);
+                    ctx.lineTo(fx.x + Math.cos(a) * r, fx.y + Math.sin(a) * r);
+                    ctx.strokeStyle = '#8bf';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'oil') {
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(80,60,30,0.4)';
+                ctx.globalAlpha = fx.life / 15;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'line') {
+                ctx.beginPath();
+                ctx.moveTo(fx.x1, fx.y1);
+                ctx.lineTo(fx.x2, fx.y2);
+                ctx.strokeStyle = fx.color;
+                ctx.globalAlpha = fx.life / 6;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'muzzle') {
+                const a = fx.life / 5;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, 8 * a, 0, Math.PI*2);
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = a * 0.8;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, 12 * a, 0, Math.PI*2);
+                ctx.fillStyle = fx.color;
+                ctx.globalAlpha = a * 0.4;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'hit') {
+                ctx.fillStyle = fx.color;
+                ctx.globalAlpha = fx.life / 6;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, 5 * (1 - fx.life/6), 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'particle') {
+                fx.x += fx.vx;
+                fx.y += fx.vy;
+                fx.vy += 0.1;
+                ctx.fillStyle = fx.color;
+                ctx.globalAlpha = fx.life / 25;
+                ctx.beginPath();
+                ctx.arc(fx.x, fx.y, fx.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (fx.type === 'icbm') {
+                // ICBM flies in an arc from center-bottom to target
+                const t = fx.progress;
+                // Quadratic bezier: start -> control point (high arc) -> target
+                const cpX = (fx.startX + fx.targetX) / 2;
+                const cpY = Math.min(fx.startY, fx.targetY) - 80; // shallow arc
+                const ix = (1-t)*(1-t)*fx.startX + 2*(1-t)*t*cpX + t*t*fx.targetX;
+                const iy = (1-t)*(1-t)*fx.startY + 2*(1-t)*t*cpY + t*t*fx.targetY;
+                // Compute heading from tangent
+                const dtx = 2*(1-t)*(cpX - fx.startX) + 2*t*(fx.targetX - cpX);
+                const dty = 2*(1-t)*(cpY - fx.startY) + 2*t*(fx.targetY - cpY);
+                const heading = Math.atan2(dty, dtx);
+
+                // Smoke trail
+                for (let s = 1; s <= 5; s++) {
+                    const st = Math.max(0, t - s * 0.015);
+                    const sx = (1-st)*(1-st)*fx.startX + 2*(1-st)*st*cpX + st*st*fx.targetX;
+                    const sy = (1-st)*(1-st)*fx.startY + 2*(1-st)*st*cpY + st*st*fx.targetY;
+                    ctx.fillStyle = `rgba(200,200,200,${0.3 - s * 0.05})`;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 3 + s, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Missile body
+                ctx.save();
+                ctx.translate(ix, iy);
+                ctx.rotate(heading);
+                // Body
+                ctx.fillStyle = '#ddd';
+                ctx.beginPath();
+                ctx.moveTo(12, 0);
+                ctx.lineTo(-8, -4);
+                ctx.lineTo(-8, 4);
+                ctx.closePath();
+                ctx.fill();
+                // Nosecone
+                ctx.fillStyle = '#f44';
+                ctx.beginPath();
+                ctx.moveTo(12, 0);
+                ctx.lineTo(6, -3);
+                ctx.lineTo(6, 3);
+                ctx.closePath();
+                ctx.fill();
+                // Fins
+                ctx.fillStyle = '#999';
+                ctx.beginPath();
+                ctx.moveTo(-8, -4); ctx.lineTo(-12, -8); ctx.lineTo(-6, -4);
+                ctx.closePath(); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-8, 4); ctx.lineTo(-12, 8); ctx.lineTo(-6, 4);
+                ctx.closePath(); ctx.fill();
+                // Flame
+                ctx.fillStyle = '#f84';
+                ctx.beginPath();
+                ctx.moveTo(-8, -2); ctx.lineTo(-14 - Math.random()*4, 0); ctx.lineTo(-8, 2);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#ff0';
+                ctx.beginPath();
+                ctx.moveTo(-8, -1); ctx.lineTo(-11 - Math.random()*3, 0); ctx.lineTo(-8, 1);
+                ctx.closePath(); ctx.fill();
+                ctx.restore();
+
+                // Target reticle
+                ctx.strokeStyle = 'rgba(255,100,50,0.4)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4,4]);
+                ctx.beginPath();
+                ctx.arc(fx.targetX, fx.targetY, fx.radius, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+    },
+
+    renderPlacement() {
+        if (!Game.selectedTowerDef || Game.state !== 'playing') return;
+        const mx = Game.mouse.x;
+        const my = Game.mouse.y;
+        const g = snapToGrid(mx, my);
+        const def = Game.selectedTowerDef;
+        const gw = def.gridW || 1;
+        const gh = def.gridH || 1;
+        const can = Game.canPlace(mx, my, def) && Game.money >= def.cost;
+
+        // Show multi-cell footprint highlight
+        ctx.fillStyle = can ? 'rgba(100,255,100,0.3)' : 'rgba(255,100,100,0.3)';
+        ctx.fillRect(g.col * GRID_SIZE, g.row * GRID_SIZE, GRID_SIZE * gw, GRID_SIZE * gh);
+        ctx.strokeStyle = can ? '#5f5' : '#f55';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(g.col * GRID_SIZE, g.row * GRID_SIZE, GRID_SIZE * gw, GRID_SIZE * gh);
+
+        // Range preview (centered on footprint)
+        const cx = g.col * GRID_SIZE + (gw * GRID_SIZE) / 2;
+        const cy = g.row * GRID_SIZE + (gh * GRID_SIZE) / 2;
+        if (def.range > 0) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, def.range, 0, Math.PI*2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    },
+
+    renderAbilityPreview() {
+        if (!Game.activeAbility || Game.state !== 'playing') return;
+        const mx = Game.mouse.x;
+        const my = Game.mouse.y;
+
+        if (Game.activeAbility === 'nuke') {
+            ctx.beginPath();
+            ctx.arc(mx, my, 120, 0, Math.PI*2);
+            ctx.strokeStyle = 'rgba(255,136,68,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255,136,68,0.1)';
+            ctx.fill();
+            ctx.fillStyle = '#f84';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('\uD83D\uDE80', mx, my + 6);
+            // Show trajectory line from center bottom
+            ctx.setLineDash([4, 6]);
+            ctx.strokeStyle = 'rgba(255,136,68,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(CW/2, CH);
+            ctx.lineTo(mx, my);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        if (Game.activeAbility === 'wall') {
+            const hs = GRID_SIZE / 2;
+            ctx.fillStyle = Game.isOnPath(mx, my) && !Game.isOnWall(mx, my)
+                ? 'rgba(136,136,136,0.5)' : 'rgba(255,100,100,0.3)';
+            ctx.fillRect(mx - hs, my - hs, GRID_SIZE, GRID_SIZE);
+        }
+        if (Game.activeAbility === 'freeze') {
+            ctx.beginPath();
+            ctx.arc(mx, my, 120, 0, Math.PI*2);
+            ctx.strokeStyle = 'rgba(170,220,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(170,220,255,0.1)';
+            ctx.fill();
+            ctx.fillStyle = '#aef';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('\u2744', mx, my + 6);
+        }
+    },
+
+    // ============================================================
+    // UI
+    // ============================================================
+    _lastUIMoney: -1,
+
+    updateUI() {
+        document.getElementById('moneyVal').textContent = Game.money;
+        document.getElementById('waveVal').textContent = Game.wave + '/' + Game.maxWaves;
+        document.getElementById('livesVal').textContent = Game.lives;
+        document.getElementById('scoreVal').textContent = Game.score.toLocaleString();
+
+        // Update tower cost colors when money changes (without full DOM rebuild)
+        if (Game.money !== Game._lastUIMoney) {
+            Game._lastUIMoney = Game.money;
+            document.querySelectorAll('.tower-item').forEach((el, i) => {
+                const tab = TOWER_DEFS[Game.currentTab];
+                if (i < tab.length) {
+                    const costEl = el.querySelector('.tower-cost');
+                    if (costEl) {
+                        const unlocked = Game.unlockedTowers.has(tab[i].id);
+                        const canAfford = Game.money >= tab[i].cost;
+                        costEl.style.color = (!canAfford && unlocked) ? '#f55' : '';
+                    }
+                }
+            });
+        }
+
+        // Wave timer display
+        if (Game.state === 'playing' && Game.pendingWave.length === 0 && Game.enemies.length === 0 && Game.wave < Game.maxWaves) {
+            const secs = Math.ceil(Game.waveTimer / 60);
+            document.getElementById('btnWave').textContent = 'SEND (' + secs + 's)';
+        } else if (Game.wave >= Game.maxWaves && Game.enemies.length === 0) {
+            document.getElementById('btnWave').textContent = 'COMPLETE';
+        } else {
+            document.getElementById('btnWave').textContent = 'SEND WAVE';
+        }
+
+        // Ability states
+        const hasNuke = Game.towers.some(t => t.def.building === 'nuke');
+        const hasWall = Game.towers.some(t => t.def.building === 'wall');
+        const hasLab = Game.towers.some(t => t.def.building === 'lab');
+
+        const nukeBtn = document.getElementById('abilNuke');
+        const wallBtn = document.getElementById('abilWall');
+        const freezeBtn = document.getElementById('abilFreeze');
+
+        nukeBtn.className = 'ability-btn ' + (hasNuke ? (Game.nukeCooldown > 0 ? '' : 'available') : 'locked');
+        wallBtn.className = 'ability-btn ' + (hasWall ? (Game.wallCooldown > 0 ? '' : 'available') : 'locked');
+        freezeBtn.className = 'ability-btn ' + (hasLab ? (Game.freezeCooldown > 0 ? '' : 'available') : 'locked');
+
+        if (Game.activeAbility === 'nuke') nukeBtn.classList.add('active-ability');
+        if (Game.activeAbility === 'wall') wallBtn.classList.add('active-ability');
+        if (Game.activeAbility === 'freeze') freezeBtn.classList.add('active-ability');
+
+        // Cooldown overlays
+        nukeBtn.querySelector('.cooldown-overlay').style.height = hasNuke ? (Game.nukeCooldown / Game.nukeCooldownMax * 100) + '%' : '100%';
+        wallBtn.querySelector('.cooldown-overlay').style.height = hasWall ? (Game.wallCooldown / Game.wallCooldownMax * 100) + '%' : '100%';
+        freezeBtn.querySelector('.cooldown-overlay').style.height = hasLab ? (Game.freezeCooldown / Game.freezeCooldownMax * 100) + '%' : '100%';
+
+        // Wave preview
+        if (Game.wave < Game.maxWaves) {
+            const preview = makeEnemyDef(Game.wave + 1, Game.difficulty);
+            const container = document.getElementById('waveEnemies');
+            container.innerHTML = preview.map(e =>
+                `<div class="preview-enemy" style="background:${e.color}" title="${e.type}${e.flying?' (air)':''}${e.shield?' [shield]':''}${e.autorepair?' [repair]':''}${e.jammer?' [jammer]':''}">
+                    ${e.flying ? '\u25C7' : '\u25CF'}
+                </div>`
+            ).join('');
+        }
+    },
+
+    renderTowerList() {
+        const list = document.getElementById('towerList');
+        const tab = TOWER_DEFS[Game.currentTab];
+        list.innerHTML = '';
+
+        for (const def of tab) {
+            const unlocked = Game.unlockedTowers.has(def.id);
+            const canAfford = Game.money >= def.cost;
+            const div = document.createElement('div');
+            div.className = 'tower-item' + (!unlocked ? ' locked' : '') + (Game.selectedTowerDef === def ? ' selected' : '');
+
+            let lockText = '';
+            if (!unlocked && def.unlockReq) {
+                const r = def.unlockReq;
+                if (r.type === 'build') lockText = `Build ${r.count} ${r.tower}`;
+                if (r.type === 'build_type') lockText = `Build ${r.tower}`;
+                if (r.type === 'money') lockText = `Have $${r.amount}`;
+                if (r.type === 'wave') lockText = `Reach wave ${r.wave}`;
+            }
+
+            div.innerHTML = `
+                <div class="tower-icon" style="background:${def.color}22;border:1px solid ${def.color}">${def.icon}</div>
+                <div class="tower-info">
+                    <div class="tower-name">${def.name}</div>
+                    <div class="tower-cost" style="${canAfford||!unlocked?'':'color:#f55'}">$${def.cost}${(def.gridW||1)>1?' ('+def.gridW+'x'+def.gridH+')':''}</div>
+                    <div class="tower-desc">${def.desc}</div>
+                    ${!unlocked ? `<div class="tower-lock">\uD83D\uDD12 ${lockText}</div>` : ''}
+                </div>
+            `;
+
+            if (unlocked) {
+                div.addEventListener('click', () => {
+                    Game.selectedTowerDef = Game.selectedTowerDef === def ? null : def;
+                    Game.sellMode = false;
+                    Game.activeAbility = null;
+                    document.getElementById('btnSell').classList.remove('sell-mode');
+                    document.querySelectorAll('.ability-btn').forEach(el => el.classList.remove('active-ability'));
+                    Game.renderTowerList();
+                });
+            }
+
+            list.appendChild(div);
+        }
+    },
+
+    // ============================================================
+    // GAME LOOP
+    // ============================================================
+    lastTime: 0,
+    accumulator: 0,
+    TICK_RATE: 1000 / 60,
+
+    loop(timestamp) {
+        if (!Game.lastTime) Game.lastTime = timestamp;
+        const dt = timestamp - Game.lastTime;
+        Game.lastTime = timestamp;
+
+        Game.accumulator += dt;
+        while (Game.accumulator >= Game.TICK_RATE) {
+            Game.update();
+            Game.accumulator -= Game.TICK_RATE;
+        }
+
+        Game.render();
+        requestAnimationFrame(Game.loop);
+    },
+};
+
+// Helper: hex to rgb string
+function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    const r = parseInt(hex.substring(0,2), 16);
+    const g = parseInt(hex.substring(2,4), 16);
+    const b = parseInt(hex.substring(4,6), 16);
+    return `${r},${g},${b}`;
+}
+
+// Scale game to fill viewport on large screens
+function scaleGame() {
+    const container = document.getElementById('gameContainer');
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const gw = 1004, gh = 584; // container natural size (780 + 220 + 4 border)
+    const scale = Math.min(vw / gw, vh / gh, 1.8);
+    if (scale > 1.05) {
+        container.style.transform = `scale(${scale})`;
+    } else {
+        container.style.transform = '';
+    }
+}
+window.addEventListener('resize', scaleGame);
+
+// Initialize
+Game.init();
+scaleGame();
+</script>
+</body>
+</html>
