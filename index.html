@@ -253,6 +253,42 @@ body {
     margin-bottom: 8px;
     text-transform: uppercase;
 }
+#mapButtons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    max-width: 700px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.map-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    border: 2px solid #e94560;
+    border-radius: 8px;
+    background: rgba(233,69,96,0.1);
+    padding: 8px;
+    transition: all 0.2s;
+}
+.map-card:hover {
+    background: rgba(233,69,96,0.3);
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(233,69,96,0.3);
+}
+.map-card canvas {
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+.map-card .map-name {
+    color: #e94560;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
 #gameOverScreen h2 { color: #e94560; font-size: 36px; margin-bottom: 10px; }
 #gameOverScreen .go-stats { color: #aaa; font-size: 14px; margin: 5px 0; }
 
@@ -278,6 +314,7 @@ body {
     }
     #menuScreen h1 { font-size: 32px; }
     .menu-btn { min-width: 160px; font-size: 14px; padding: 10px 30px; }
+    #mapButtons { max-width: 500px; }
     #gameOverScreen h2 { font-size: 28px; }
 }
 
@@ -427,7 +464,7 @@ function snapToGrid(x, y) {
 }
 
 // ============================================================
-// MAP DATA - Three canyon maps
+// MAP DATA - Canyon maps with varied lane widths and themes
 // ============================================================
 const MAPS = {
     canyon: {
@@ -448,24 +485,8 @@ const MAPS = {
         groundColor: '#5c4033',
         cliffColor: '#8B7355',
     },
-    desert: {
-        name: 'Desert Maze',
-        // Vertical S-curves with wide lanes
-        path: [
-            {x: -20, y: 80},
-            {x: 240, y: 80},
-            {x: 240, y: 480},
-            {x: 500, y: 480},
-            {x: 500, y: 80},
-            {x: 800, y: 80}
-        ],
-        pathWidth: 80,
-        bgColor: '#2d1f15',
-        groundColor: '#4a3328',
-        cliffColor: '#7a6050',
-    },
     fortress: {
-        name: 'Fortress',
+        name: 'The Descent',
         // Top entry, winding down with enough space between horizontal lanes
         path: [
             {x: 390, y: -20},
@@ -483,7 +504,7 @@ const MAPS = {
         cliffColor: '#6a4a55',
     },
     crossroads: {
-        name: 'Crossroads',
+        name: 'Horseshoe Bend',
         // Long winding path with multiple turns
         path: [
             {x: -20, y: 500},
@@ -514,6 +535,80 @@ const MAPS = {
         bgColor: '#25201f',
         groundColor: '#3a3530',
         cliffColor: '#6a5a50',
+    },
+    // --- Variable-width themed maps ---
+    hourglass: {
+        name: 'The Hourglass',
+        // Wide entrance narrows to a tight bottleneck in the middle, then widens again
+        path: [
+            {x: -20, y: 100},
+            {x: 200, y: 100},
+            {x: 200, y: 480},
+            {x: 390, y: 290},
+            {x: 580, y: 100},
+            {x: 580, y: 480},
+            {x: 800, y: 480}
+        ],
+        pathWidth: 80,
+        pathWidths: [140, 140, 100, 36, 100, 140, 140],
+        bgColor: '#2a1a2a',
+        groundColor: '#45304a',
+        cliffColor: '#6a4a75',
+    },
+    riverdelta: {
+        name: 'River Delta',
+        // Starts as a narrow mountain stream, gradually widens into a broad delta
+        path: [
+            {x: -20, y: 60},
+            {x: 180, y: 60},
+            {x: 180, y: 300},
+            {x: 450, y: 300},
+            {x: 450, y: 520},
+            {x: 800, y: 520}
+        ],
+        pathWidth: 80,
+        pathWidths: [34, 34, 60, 60, 110, 160],
+        bgColor: '#152520',
+        groundColor: '#1e3a2e',
+        cliffColor: '#2e5a45',
+    },
+    snakebite: {
+        name: 'Snake Bite',
+        // Alternating wide bulges and narrow constrictions like a snake's body
+        path: [
+            {x: -20, y: 290},
+            {x: 100, y: 290},
+            {x: 200, y: 100},
+            {x: 350, y: 100},
+            {x: 450, y: 290},
+            {x: 550, y: 480},
+            {x: 700, y: 480},
+            {x: 800, y: 290}
+        ],
+        pathWidth: 80,
+        pathWidths: [50, 120, 40, 120, 40, 120, 40, 50],
+        bgColor: '#201a15',
+        groundColor: '#3a3025',
+        cliffColor: '#5a4a35',
+    },
+    gauntlet: {
+        name: 'The Gauntlet',
+        // Starts very wide and easy, progressively narrows to a punishing final stretch
+        path: [
+            {x: -20, y: 480},
+            {x: 200, y: 480},
+            {x: 200, y: 100},
+            {x: 500, y: 100},
+            {x: 500, y: 480},
+            {x: 700, y: 480},
+            {x: 700, y: 200},
+            {x: 800, y: 200}
+        ],
+        pathWidth: 80,
+        pathWidths: [160, 160, 120, 120, 70, 70, 36, 36],
+        bgColor: '#1a1520',
+        groundColor: '#302540',
+        cliffColor: '#504068',
     }
 };
 
@@ -567,16 +662,16 @@ const TOWER_DEFS = [
 // ============================================================
 // Base enemy types with stats per level (1-5)
 const ENEMY_BASES = {
-    soldier:   { color: '#8a5', size: 8,  flying: false, speed: 1.2,  hpBase: 30,  hpPerLvl: 25,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 1 },
-    tank:      { color: '#585', size: 11, flying: false, speed: 0.8,  hpBase: 80,  hpPerLvl: 50,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 3 },
-    speeder:   { color: '#cc5', size: 7,  flying: false, speed: 2.0,  hpBase: 20,  hpPerLvl: 15,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 5 },
-    drone:     { color: '#5af', size: 8,  flying: true,  speed: 1.5,  hpBase: 25,  hpPerLvl: 20,  rewardBase: 15,  rewardPerLvl: 10,  unlockWave: 7 },
-    shielded:  { color: '#a8a', size: 10, flying: false, speed: 1.0,  hpBase: 60,  hpPerLvl: 40,  rewardBase: 25,  rewardPerLvl: 15,  unlockWave: 10 },
-    healer:    { color: '#5e5', size: 9,  flying: false, speed: 1.0,  hpBase: 50,  hpPerLvl: 30,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 14 },
-    airship:   { color: '#88f', size: 13, flying: true,  speed: 0.7,  hpBase: 100, hpPerLvl: 60,  rewardBase: 30,  rewardPerLvl: 20,  unlockWave: 18 },
-    jammer:    { color: '#f5a', size: 12, flying: false, speed: 0.9,  hpBase: 120, hpPerLvl: 50,  rewardBase: 40,  rewardPerLvl: 25,  unlockWave: 22 },
-    fortress:  { color: '#c55', size: 15, flying: false, speed: 0.5,  hpBase: 250, hpPerLvl: 80,  rewardBase: 60,  rewardPerLvl: 35,  unlockWave: 28 },
-    mothership:{ color: '#f5f', size: 16, flying: true,  speed: 0.4,  hpBase: 300, hpPerLvl: 100, rewardBase: 80,  rewardPerLvl: 45,  unlockWave: 35 },
+    soldier:   { color: '#8a5', size: 12, flying: false, speed: 1.2,  hpBase: 30,  hpPerLvl: 25,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 1 },
+    tank:      { color: '#585', size: 15, flying: false, speed: 0.8,  hpBase: 80,  hpPerLvl: 50,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 3 },
+    speeder:   { color: '#cc5', size: 10, flying: false, speed: 2.0,  hpBase: 20,  hpPerLvl: 15,  rewardBase: 10,  rewardPerLvl: 8,   unlockWave: 5 },
+    drone:     { color: '#5af', size: 12, flying: true,  speed: 1.5,  hpBase: 25,  hpPerLvl: 20,  rewardBase: 15,  rewardPerLvl: 10,  unlockWave: 7 },
+    shielded:  { color: '#a8a', size: 14, flying: false, speed: 1.0,  hpBase: 60,  hpPerLvl: 40,  rewardBase: 25,  rewardPerLvl: 15,  unlockWave: 10 },
+    healer:    { color: '#5e5', size: 13, flying: false, speed: 1.0,  hpBase: 50,  hpPerLvl: 30,  rewardBase: 20,  rewardPerLvl: 15,  unlockWave: 14 },
+    airship:   { color: '#88f', size: 17, flying: true,  speed: 0.7,  hpBase: 100, hpPerLvl: 60,  rewardBase: 30,  rewardPerLvl: 20,  unlockWave: 18 },
+    jammer:    { color: '#f5a', size: 16, flying: false, speed: 0.9,  hpBase: 120, hpPerLvl: 50,  rewardBase: 40,  rewardPerLvl: 25,  unlockWave: 22 },
+    fortress:  { color: '#c55', size: 19, flying: false, speed: 0.5,  hpBase: 250, hpPerLvl: 80,  rewardBase: 60,  rewardPerLvl: 35,  unlockWave: 28 },
+    mothership:{ color: '#f5f', size: 21, flying: true,  speed: 0.4,  hpBase: 300, hpPerLvl: 100, rewardBase: 80,  rewardPerLvl: 45,  unlockWave: 35 },
 };
 
 // Possible specials (at most one per enemy)
@@ -674,11 +769,11 @@ const Game = {
 
     // Ability cooldowns (in frames)
     nukeCooldown: 0,
-    nukeCooldownMax: 1800,
+    nukeCooldownMax: 3600,
     wallCooldown: 0,
-    wallCooldownMax: 600,
+    wallCooldownMax: 1200,
     freezeCooldown: 0,
-    freezeCooldownMax: 1200,
+    freezeCooldownMax: 2400,
 
     // Unlocks
     unlockedTowers: new Set(),
@@ -815,11 +910,69 @@ const Game = {
         const container = document.getElementById('mapButtons');
         container.innerHTML = '';
         for (const [key, map] of Object.entries(MAPS)) {
-            const btn = document.createElement('button');
-            btn.className = 'menu-btn';
-            btn.textContent = map.name;
-            btn.onclick = () => Game.start(diff, key);
-            container.appendChild(btn);
+            const card = document.createElement('div');
+            card.className = 'map-card';
+            card.onclick = () => Game.start(diff, key);
+
+            // Create mini canvas preview
+            const pw = 120, ph = 90;
+            const cvs = document.createElement('canvas');
+            cvs.width = pw; cvs.height = ph;
+            const pc = cvs.getContext('2d');
+            const sx = pw / 780, sy = ph / 580;
+
+            // Background
+            pc.fillStyle = map.groundColor;
+            pc.fillRect(0, 0, pw, ph);
+
+            // Draw path with cliffs (supports variable widths)
+            const path = map.path;
+            const widths = map.pathWidths || path.map(() => map.pathWidth);
+            pc.lineCap = 'round';
+
+            // Helper to draw variable-width preview layer
+            const drawPreviewLayer = (extra, color) => {
+                pc.strokeStyle = color;
+                pc.fillStyle = color;
+                for (let i = 0; i < path.length - 1; i++) {
+                    pc.lineWidth = ((widths[i] + widths[i+1]) / 2 + extra) * sx;
+                    pc.beginPath();
+                    pc.moveTo(path[i].x * sx, path[i].y * sy);
+                    pc.lineTo(path[i+1].x * sx, path[i+1].y * sy);
+                    pc.stroke();
+                }
+                for (let i = 0; i < path.length; i++) {
+                    pc.beginPath();
+                    pc.arc(path[i].x * sx, path[i].y * sy, (widths[i] + extra) / 2 * sx, 0, Math.PI * 2);
+                    pc.fill();
+                }
+            };
+
+            drawPreviewLayer(16, map.cliffColor);
+            drawPreviewLayer(0, '#a08060');
+            drawPreviewLayer(-6, '#b89870');
+
+            // Entry marker
+            pc.fillStyle = '#0ff';
+            pc.beginPath();
+            pc.arc(Math.max(3, path[0].x * sx), path[0].y * sy, 3, 0, Math.PI * 2);
+            pc.fill();
+
+            // Exit marker
+            const last = path[path.length - 1];
+            pc.fillStyle = '#f44';
+            pc.beginPath();
+            pc.arc(Math.min(pw - 3, last.x * sx), Math.min(ph - 3, last.y * sy), 3, 0, Math.PI * 2);
+            pc.fill();
+
+            card.appendChild(cvs);
+
+            const label = document.createElement('div');
+            label.className = 'map-name';
+            label.textContent = map.name;
+            card.appendChild(label);
+
+            container.appendChild(card);
         }
     },
 
@@ -884,16 +1037,21 @@ const Game = {
 
     computePath() {
         const p = Game.map.path;
+        const widths = Game.map.pathWidths;
+        const defaultW = Game.map.pathWidth;
         Game.pathSegments = [];
         Game.pathTotalLength = 0;
         for (let i = 0; i < p.length - 1; i++) {
             const dx = p[i+1].x - p[i].x;
             const dy = p[i+1].y - p[i].y;
             const len = Math.sqrt(dx*dx + dy*dy);
+            const w0 = widths ? widths[i] : defaultW;
+            const w1 = widths ? widths[i+1] : defaultW;
             Game.pathSegments.push({
                 x0: p[i].x, y0: p[i].y,
                 x1: p[i+1].x, y1: p[i+1].y,
-                len, startDist: Game.pathTotalLength
+                len, startDist: Game.pathTotalLength,
+                w0, w1, width: (w0 + w1) / 2
             });
             Game.pathTotalLength += len;
         }
@@ -937,7 +1095,6 @@ const Game = {
     },
 
     isOnPath(x, y) {
-        const w = Game.map.pathWidth / 2 + 4;
         for (const seg of Game.pathSegments) {
             const dx = seg.x1 - seg.x0;
             const dy = seg.y1 - seg.y0;
@@ -945,7 +1102,8 @@ const Game = {
             const t = clamp(((x - seg.x0) * dx + (y - seg.y0) * dy) / l2, 0, 1);
             const px = seg.x0 + t * dx;
             const py = seg.y0 + t * dy;
-            if (Math.hypot(x - px, y - py) < w) return true;
+            const segW = lerp(seg.w0, seg.w1, t) / 2 + 4;
+            if (Math.hypot(x - px, y - py) < segW) return true;
         }
         return false;
     },
@@ -1006,13 +1164,13 @@ const Game = {
         Game.flowCols = Math.ceil(CW / cs);
         Game.flowRows = Math.ceil(CH / cs);
         Game.flowGrid = [];
-        const halfWidth = Game.map.pathWidth / 2;
         for (let c = 0; c < Game.flowCols; c++) {
             Game.flowGrid[c] = [];
             for (let r = 0; r < Game.flowRows; r++) {
                 const cx = c * cs + cs / 2;
                 const cy = r * cs + cs / 2;
                 let onPath = false;
+                let localHalfWidth = 0;
                 for (const seg of Game.pathSegments) {
                     const dx = seg.x1 - seg.x0;
                     const dy = seg.y1 - seg.y0;
@@ -1020,7 +1178,8 @@ const Game = {
                     const t = clamp(((cx - seg.x0) * dx + (cy - seg.y0) * dy) / l2, 0, 1);
                     const px = seg.x0 + t * dx;
                     const py = seg.y0 + t * dy;
-                    if (Math.hypot(cx - px, cy - py) < halfWidth) { onPath = true; break; }
+                    const hw = lerp(seg.w0, seg.w1, t) / 2;
+                    if (Math.hypot(cx - px, cy - py) < hw) { onPath = true; localHalfWidth = hw; break; }
                 }
                 // Compute distance to nearest path center for center-bias
                 let minPathDist = Infinity;
@@ -1037,8 +1196,25 @@ const Game = {
                     }
                 }
                 // Edge cost: cells far from center cost more (0 at center, up to 3 at edge)
-                const edgeCost = onPath ? Math.round((minPathDist / halfWidth) * 3) : 0;
-                Game.flowGrid[c][r] = { walkable: onPath, blocked: false, dist: Infinity, dirX: 0, dirY: 0, edgeCost };
+                const edgeCost = onPath ? Math.round((minPathDist / (localHalfWidth || 1)) * 3) : 0;
+                // Track which path segments this cell belongs to (by index)
+                const segIndices = [];
+                if (onPath) {
+                    for (let si = 0; si < Game.pathSegments.length; si++) {
+                        const seg = Game.pathSegments[si];
+                        const sdx = seg.x1 - seg.x0;
+                        const sdy = seg.y1 - seg.y0;
+                        const sl2 = seg.len * seg.len;
+                        const st = clamp(((cx - seg.x0) * sdx + (cy - seg.y0) * sdy) / sl2, 0, 1);
+                        const spx = seg.x0 + st * sdx;
+                        const spy = seg.y0 + st * sdy;
+                        const shw = lerp(seg.w0, seg.w1, st) / 2;
+                        if (Math.hypot(cx - spx, cy - spy) < shw) {
+                            segIndices.push(si);
+                        }
+                    }
+                }
+                Game.flowGrid[c][r] = { walkable: onPath, blocked: false, dist: Infinity, dirX: 0, dirY: 0, edgeCost, segIndices };
             }
         }
         Game.flowDirty = true;
@@ -1072,17 +1248,31 @@ const Game = {
         if (exitPt.x < 0) for (let r = 0; r < rows; r++) seedCell(0, r);
         if (exitPt.y < 0) for (let c = 0; c < cols; c++) seedCell(c, 0);
 
-        // BFS
+        // BFS - only propagate between cells on same or consecutive path segments
         const dirs8 = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+        // Helper: check if two cells share a segment or are on consecutive segments
+        const canPropagate = (segsA, segsB) => {
+            for (const a of segsA) {
+                for (const b of segsB) {
+                    if (Math.abs(a - b) <= 1) return true;
+                }
+            }
+            return false;
+        };
         let head = 0;
         while (head < queue.length) {
             const [cc, cr] = queue[head++];
-            const curDist = grid[cc][cr].dist;
+            const curCell = grid[cc][cr];
+            const curDist = curCell.dist;
             for (const [dc, dr] of dirs8) {
                 const nc = cc + dc, nr = cr + dr;
                 if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue;
                 const nb = grid[nc][nr];
                 if (!nb.walkable || nb.blocked) continue;
+                // Only allow flow between cells on same or consecutive path segments
+                if (curCell.segIndices && nb.segIndices && curCell.segIndices.length > 0 && nb.segIndices.length > 0) {
+                    if (!canPropagate(curCell.segIndices, nb.segIndices)) continue;
+                }
                 const nd = curDist + 1 + nb.edgeCost;
                 if (nd < nb.dist) { nb.dist = nd; queue.push([nc, nr]); }
             }
@@ -1350,8 +1540,8 @@ const Game = {
 
     doNuke(x, y) {
         Game.nukeCooldown = Game.nukeCooldownMax;
-        const radius = 120;
-        const damage = 500 + Game.wave * 30;
+        const radius = 90;
+        const damage = 300 + Game.wave * 15;
         // Launch ICBM from center bottom to target area
         Game.effects.push({
             type: 'icbm',
@@ -1429,10 +1619,13 @@ const Game = {
             Game.computeFlowField();
         }
 
-        // Cooldowns
-        if (Game.nukeCooldown > 0) Game.nukeCooldown--;
-        if (Game.wallCooldown > 0) Game.wallCooldown--;
-        if (Game.freezeCooldown > 0) Game.freezeCooldown--;
+        // Cooldowns - only tick during active waves, not between rounds
+        const waveActive = Game.enemies.length > 0 || Game.pendingWave.length > 0;
+        if (waveActive) {
+            if (Game.nukeCooldown > 0) Game.nukeCooldown--;
+            if (Game.wallCooldown > 0) Game.wallCooldown--;
+            if (Game.freezeCooldown > 0) Game.freezeCooldown--;
+        }
 
         // Wave timer
         if (Game.pendingWave.length === 0 && Game.enemies.length === 0 && Game.wave < Game.maxWaves) {
@@ -1450,7 +1643,8 @@ const Game = {
                 const sp = Game.map.path[0];
                 const seg0 = Game.pathSegments[0];
                 const segA = Math.atan2(seg0.y1 - seg0.y0, seg0.x1 - seg0.x0);
-                const lateralOff = rand(-Game.map.pathWidth / 4, Game.map.pathWidth / 4);
+                const spawnW = Game.pathSegments[0].w0;
+                const lateralOff = rand(-spawnW / 4, spawnW / 4);
                 Game.enemies.push({
                     ...def,
                     x: sp.x + (-Math.sin(segA)) * lateralOff,
@@ -1705,6 +1899,28 @@ const Game = {
             p.x += p.vx;
             p.y += p.vy;
 
+            // Position-targeted splash projectiles (howitzer) - detonate on arrival
+            if ((p.splash || p.goosplash) && p.targetX !== undefined) {
+                if (dist(p, {x: p.targetX, y: p.targetY}) < 8) {
+                    // Find closest enemy to impact point for splash center
+                    let splashTarget = null;
+                    let closestDist = p.splashRadius;
+                    for (const e of Game.enemies) {
+                        if (!e.alive) continue;
+                        const d = dist({x: p.targetX, y: p.targetY}, e);
+                        if (d < closestDist) { splashTarget = e; closestDist = d; }
+                    }
+                    if (splashTarget) {
+                        Game.hitEnemy(splashTarget, p);
+                    } else {
+                        // No enemy nearby - just show the explosion effect
+                        Game.effects.push({type:'ring', x:p.targetX, y:p.targetY, radius:0, maxRadius:p.splashRadius, color:'#fa5', life:12});
+                    }
+                    p.alive = false;
+                    continue;
+                }
+            }
+
             // Check hit
             if (p.target && p.target.alive) {
                 if (dist(p, p.target) < p.target.size + 4) {
@@ -1831,14 +2047,17 @@ const Game = {
         // Standard projectile
         const angle = mfAngle;
         const speed = 4;
+        const isSplash = def.special === 'splash' || def.special === 'goosplash';
         Game.projectiles.push({
             x: tower.x, y: tower.y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             speed,
             damage: tower.damage,
-            target,
-            homing: true,
+            target: isSplash ? null : target,
+            targetX: isSplash ? target.x : undefined,
+            targetY: isSplash ? target.y : undefined,
+            homing: !isSplash,
             alive: true,
             life: 120,
             color: def.color,
@@ -1998,10 +2217,33 @@ const Game = {
         ctx.restore();
     },
 
+    // Draw variable-width path layer: for each segment, draw a stroke + circles at joints
+    drawVarWidthPath(path, segs, widths, extra, color) {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < segs.length; i++) {
+            const s = segs[i];
+            ctx.lineWidth = (s.w0 + s.w1) / 2 + extra;
+            ctx.beginPath();
+            ctx.moveTo(s.x0, s.y0);
+            ctx.lineTo(s.x1, s.y1);
+            ctx.stroke();
+        }
+        // Draw circles at each waypoint for smooth joints
+        for (let i = 0; i < path.length; i++) {
+            const r = (widths[i] + extra) / 2;
+            ctx.beginPath();
+            ctx.arc(path[i].x, path[i].y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    },
+
     renderMap() {
         const map = Game.map;
         const path = map.path;
-        const w = map.pathWidth;
+        const segs = Game.pathSegments;
+        const widths = map.pathWidths || path.map(() => map.pathWidth);
         const seed = Game.mapKey.charCodeAt(0);
 
         ctx.save();
@@ -2015,74 +2257,33 @@ const Game = {
             if (!Game.isOnPath(rx, ry)) {
                 const sz = 2 + (i % 7);
                 const br = 40 + (i * 13 % 40);
-                // Rock shadow
                 ctx.fillStyle = `rgba(0,0,0,0.15)`;
                 ctx.beginPath(); ctx.ellipse(rx+1, ry+2, sz, sz*0.6, 0, 0, Math.PI*2); ctx.fill();
-                // Rock body
                 ctx.fillStyle = `rgb(${br+20},${br+10},${br})`;
                 ctx.beginPath(); ctx.ellipse(rx, ry, sz, sz*0.7, (i*37%360)*Math.PI/180, 0, Math.PI*2); ctx.fill();
-                // Highlight
                 ctx.fillStyle = `rgba(255,255,255,0.08)`;
                 ctx.beginPath(); ctx.ellipse(rx-1, ry-1, sz*0.5, sz*0.3, 0, 0, Math.PI*2); ctx.fill();
             }
         }
 
-        // Outer cliff shadow (depth effect)
-        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-        ctx.lineWidth = w + 24;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-
-        // Canyon cliff outer edge
-        ctx.strokeStyle = map.cliffColor;
-        ctx.lineWidth = w + 18;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-
-        // Cliff mid layer (gradient look)
+        // Render path layers with variable widths
+        Game.drawVarWidthPath(path, segs, widths, 24, 'rgba(0,0,0,0.4)');
+        Game.drawVarWidthPath(path, segs, widths, 18, map.cliffColor);
         const midColor = lerpColor(map.cliffColor, map.groundColor, 0.5);
-        ctx.strokeStyle = midColor;
-        ctx.lineWidth = w + 10;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-
-        // Inner cliff wall
-        ctx.strokeStyle = map.groundColor;
-        ctx.lineWidth = w + 4;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-
-        // Path surface - sandy ground
-        ctx.strokeStyle = '#a08060';
-        ctx.lineWidth = w;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
-
-        // Path surface lighter center
-        ctx.strokeStyle = '#b89870';
-        ctx.lineWidth = w - 6;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.stroke();
+        Game.drawVarWidthPath(path, segs, widths, 10, midColor);
+        Game.drawVarWidthPath(path, segs, widths, 4, map.groundColor);
+        Game.drawVarWidthPath(path, segs, widths, 0, '#a08060');
+        Game.drawVarWidthPath(path, segs, widths, -6, '#b89870');
 
         // Gravel texture on path
         for (let i = 0; i < 120; i++) {
-            const seg = Game.pathSegments[i % Game.pathSegments.length];
+            const seg = segs[i % segs.length];
             const t = ((seed * 31 + i * 67) % 1000) / 1000;
             const px = lerp(seg.x0, seg.x1, t);
             const py = lerp(seg.y0, seg.y1, t);
-            const off = ((seed + i * 41) % (w-8)) - (w-8)/2;
+            const segW = lerp(seg.w0, seg.w1, t);
+            const maxOff = Math.max(segW - 8, 2);
+            const off = ((seed + i * 41) % maxOff) - maxOff/2;
             const angle = Math.atan2(seg.y1 - seg.y0, seg.x1 - seg.x0);
             const gx = px + Math.cos(angle + Math.PI/2) * off;
             const gy = py + Math.sin(angle + Math.PI/2) * off;
@@ -2098,11 +2299,12 @@ const Game = {
         for (const side of [-1, 1]) {
             ctx.beginPath();
             for (let i = 0; i < path.length; i++) {
+                const pw = widths[i];
                 const p0 = path[i];
                 const p1 = path[Math.min(i+1, path.length-1)];
                 const a = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-                const ox = Math.cos(a + Math.PI/2) * (w/2 - 2) * side;
-                const oy = Math.sin(a + Math.PI/2) * (w/2 - 2) * side;
+                const ox = Math.cos(a + Math.PI/2) * (pw/2 - 2) * side;
+                const oy = Math.sin(a + Math.PI/2) * (pw/2 - 2) * side;
                 if (i === 0) ctx.moveTo(p0.x + ox, p0.y + oy);
                 else ctx.lineTo(p0.x + ox, p0.y + oy);
             }
@@ -2612,42 +2814,59 @@ const Game = {
                 ctx.restore();
 
             } else if (e.type === 'mothership') {
-                // Large carrier command vessel (flying)
+                // Large carrier command vessel (flying) - diamond/kite hull
                 const s = e.size;
-                // Main hull - large disc
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Main hull - elongated diamond/kite shape
                 ctx.fillStyle = baseColor;
-                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.fill();
-                // Hull ring detail
-                ctx.strokeStyle = `rgba(${rgb},0.5)`; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.arc(0, yOff, s*0.85, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(0, yOff, s*0.6, 0, Math.PI*2); ctx.stroke();
-                // Armor plate segments
-                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
-                for (let i = 0; i < 6; i++) {
-                    const sa2 = i*Math.PI/3;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(sa2)*s*0.4, yOff+Math.sin(sa2)*s*0.4);
-                    ctx.lineTo(Math.cos(sa2)*s, yOff+Math.sin(sa2)*s);
-                    ctx.stroke();
-                }
-                // Animated running lights around edge
+                ctx.beginPath();
+                ctx.moveTo(s*1.3, yOff);          // nose
+                ctx.lineTo(s*0.1, yOff-s*0.9);    // top wing
+                ctx.lineTo(-s*1.0, yOff-s*0.4);   // rear top
+                ctx.lineTo(-s*1.2, yOff);          // tail
+                ctx.lineTo(-s*1.0, yOff+s*0.4);   // rear bottom
+                ctx.lineTo(s*0.1, yOff+s*0.9);    // bottom wing
+                ctx.closePath(); ctx.fill();
+                // Hull outline
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.5;
+                ctx.stroke();
+                // Armor panel seams
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.moveTo(s*1.3, yOff); ctx.lineTo(-s*1.2, yOff); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(s*0.1, yOff-s*0.9); ctx.lineTo(-s*0.2, yOff); ctx.lineTo(s*0.1, yOff+s*0.9); ctx.stroke();
+                // Wing engine pods
+                ctx.fillStyle = `rgba(${rgb},0.6)`;
+                ctx.beginPath(); ctx.ellipse(s*0.1, yOff-s*0.7, s*0.25, s*0.12, 0, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(s*0.1, yOff+s*0.7, s*0.25, s*0.12, 0, 0, Math.PI*2); ctx.fill();
+                // Engine glow on pods
+                ctx.fillStyle = 'rgba(200,150,255,0.4)';
+                ctx.beginPath(); ctx.arc(-s*0.1, yOff-s*0.7, s*0.1, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-s*0.1, yOff+s*0.7, s*0.1, 0, Math.PI*2); ctx.fill();
+                // Rear engine glow
+                ctx.fillStyle = 'rgba(200,150,255,0.5)';
+                ctx.beginPath(); ctx.ellipse(-s*1.3, yOff, s*0.2, s*0.15, 0, 0, Math.PI*2); ctx.fill();
+                // Central command bridge
+                ctx.fillStyle = `rgba(${rgb},0.9)`;
+                ctx.beginPath(); ctx.ellipse(s*0.2, yOff, s*0.35, s*0.25, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.ellipse(s*0.2, yOff, s*0.35, s*0.25, 0, 0, Math.PI*2); ctx.stroke();
+                // Bridge windows
+                ctx.fillStyle = 'rgba(200,220,255,0.6)';
+                ctx.beginPath(); ctx.ellipse(s*0.35, yOff, s*0.12, s*0.15, 0, 0, Math.PI*2); ctx.fill();
+                // Animated running lights along wings
                 const mlt = Date.now()/200;
-                for (let i = 0; i < 8; i++) {
-                    const la = i*Math.PI/4 + mlt;
-                    const bright = (Math.sin(la*2+mlt) + 1) * 0.5;
+                for (let i = 0; i < 6; i++) {
+                    const t = i / 5;
+                    const bright = (Math.sin(t*6 + mlt) + 1) * 0.5;
                     ctx.fillStyle = `rgba(255,200,255,${0.3+bright*0.5})`;
-                    ctx.beginPath(); ctx.arc(Math.cos(la)*s*0.85, yOff+Math.sin(la)*s*0.85, 1.5, 0, Math.PI*2); ctx.fill();
+                    const lx = s*1.1 - t*s*2.3;
+                    ctx.beginPath(); ctx.arc(lx, yOff-s*0.3-t*s*0.1, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(lx, yOff+s*0.3+t*s*0.1, 1.5, 0, Math.PI*2); ctx.fill();
                 }
-                // Central command dome
-                const dg = ctx.createRadialGradient(0, yOff-1, 0, 0, yOff, s*0.35);
-                dg.addColorStop(0, '#fff'); dg.addColorStop(0.3, `rgba(${rgb},0.8)`); dg.addColorStop(1, `rgba(${rgb},0.3)`);
-                ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, yOff, s*0.35, 0, Math.PI*2); ctx.fill();
-                // Engine glow
-                ctx.fillStyle = 'rgba(200,150,255,0.3)';
-                ctx.beginPath(); ctx.arc(0, yOff + s*0.4, s*0.2, 0, Math.PI*2); ctx.fill();
-                // Outer hull ring
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.stroke();
+                // Nose sensor dome
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(s*1.1, yOff, s*0.08, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
 
             } else if (e.type === 'tank' || e.type === 'fortress') {
                 // Tank / heavy assault vehicle (top-down)
@@ -2749,25 +2968,49 @@ const Game = {
                 ctx.restore();
 
             } else if (e.type === 'healer') {
-                // Medical support vehicle
+                // Armored medical APC (top-down)
                 const s = e.size;
-                // Rounded body
+                ctx.save(); ctx.rotate(e.heading || 0);
+                // Wheels / track pads
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-s*0.7, -s*0.75, s*0.35, s*0.2);
+                ctx.fillRect(-s*0.7, s*0.55, s*0.35, s*0.2);
+                ctx.fillRect(s*0.35, -s*0.75, s*0.35, s*0.2);
+                ctx.fillRect(s*0.35, s*0.55, s*0.35, s*0.2);
+                // Main hull - rounded rectangle
                 ctx.fillStyle = baseColor;
-                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.fill();
-                // White inner ring
-                ctx.fillStyle = 'rgba(255,255,255,0.15)';
-                ctx.beginPath(); ctx.arc(0, yOff, s*0.75, 0, Math.PI*2); ctx.fill();
-                // Red medical cross
-                ctx.fillStyle = '#ff3333';
-                const cw = s*0.25, ch = s*0.7;
-                ctx.fillRect(-cw, yOff-ch/2, cw*2, ch);
-                ctx.fillRect(-ch/2, yOff-cw, ch, cw*2);
-                ctx.strokeStyle = '#cc0000'; ctx.lineWidth = 0.5;
-                ctx.strokeRect(-cw, yOff-ch/2, cw*2, ch);
-                ctx.strokeRect(-ch/2, yOff-cw, ch, cw*2);
-                // Outer ring
+                const hw = s*1.6, hh = s*1.2;
+                ctx.beginPath();
+                ctx.roundRect(-hw/2, -hh/2, hw, hh, s*0.2);
+                ctx.fill();
                 ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.arc(0, yOff, s, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath();
+                ctx.roundRect(-hw/2, -hh/2, hw, hh, s*0.2);
+                ctx.stroke();
+                // White roof with red cross
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.beginPath();
+                ctx.roundRect(-s*0.35, -s*0.3, s*0.7, s*0.6, s*0.08);
+                ctx.fill();
+                // Red medical cross on white roof
+                ctx.fillStyle = '#dd2222';
+                const cw = s*0.12, ch = s*0.4;
+                ctx.fillRect(-cw, -ch/2, cw*2, ch);
+                ctx.fillRect(-ch/2, -cw, ch, cw*2);
+                // Front windshield
+                ctx.fillStyle = 'rgba(180,210,240,0.5)';
+                ctx.fillRect(s*0.45, -s*0.35, s*0.25, s*0.7);
+                // Rear door seam
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.moveTo(-hw/2, -s*0.15); ctx.lineTo(-hw/2-s*0.05, -s*0.15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-hw/2, s*0.15); ctx.lineTo(-hw/2-s*0.05, s*0.15); ctx.stroke();
+                // Blinking roof light
+                const blink2 = Math.sin(Date.now()/200) > 0;
+                ctx.fillStyle = blink2 ? 'rgba(255,50,50,0.8)' : 'rgba(255,50,50,0.2)';
+                ctx.beginPath(); ctx.arc(s*0.55, -s*0.45, 2, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = !blink2 ? 'rgba(50,100,255,0.8)' : 'rgba(50,100,255,0.2)';
+                ctx.beginPath(); ctx.arc(s*0.55, s*0.45, 2, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
                 // Animated healing pulse aura
                 const hp2 = (Date.now()/600) % 1;
                 ctx.strokeStyle = `rgba(100,255,100,${0.4*(1-hp2)})`;
